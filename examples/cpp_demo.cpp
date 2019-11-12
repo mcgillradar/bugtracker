@@ -10,7 +10,7 @@ int main(){
 
     std::cout << "Demonstrating C++ wrapper" << std::endl;
 
-    std::string app_directory = "/home/spruce/repos/spruce-budworm/apps/";
+    std::string app_directory = "/home/spruce/repos/bugtracker/apps/";
     std::string chdir_command = "cd " + app_directory;
     std::string sample_calib = "~/miniconda3/envs/bugtracker/bin/python calib.py 201806121500 xam";
     std::string full_command = chdir_command + "; " + sample_calib;
