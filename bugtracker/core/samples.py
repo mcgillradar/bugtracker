@@ -19,13 +19,13 @@ def sin_dbz(grid_info):
     Creates a radially sinusoidal pattern for dBZ
     """
 
-    dims = (grid.azims, grid.gates)
+    dims = (grid_info.azims, grid_info.gates)
     dbz_array = np.zeros(dims, dtype=float)
 
     min_range = 0
-    max_range = (grid.gates - 1) * grid.gate_step
+    max_range = (grid_info.gates - 1) * grid_info.gate_step
 
-    distances = np.linspace(min_range, max_range, num=grid.gates)
+    distances = np.linspace(min_range, max_range, num=grid_info.gates)
     print("Distances:", distances)
 
     scale_factor = 20000
@@ -33,7 +33,7 @@ def sin_dbz(grid_info):
     dbz_scale = 30.0
     sin_values = np.sin(scaled_distances) * dbz_scale
 
-    for x in range(0, grid.azims):
+    for x in range(0, grid_info.azims):
         dbz_array[x,:] = sin_values
 
     return dbz_array

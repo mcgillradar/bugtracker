@@ -32,11 +32,14 @@ class RadialPlotter():
         if not os.path.isdir(output_folder):
             raise FileError("Folder not found:", output_folder)
 
+        self.ax = None
+        self.fig = None
+
         self.lats = lats
         self.lons = lons
 
 
-    def _set_grid(self, ax):
+    def _set_grid(self):
         """
         Private function for setting grid
         """
@@ -47,13 +50,13 @@ class RadialPlotter():
         major_ticks_lon = np.arange(-140, -60, 1.0)
         minor_ticks_lon = np.arange(-140, -60, 0.2)
 
-        ax.set_xticks(major_ticks_lon)
-        ax.set_xticks(minor_ticks_lon, minor=True)
-        ax.set_yticks(major_ticks_lat)
-        ax.set_yticks(minor_ticks_lat, minor=True)
+        self.ax.set_xticks(major_ticks_lon)
+        self.ax.set_xticks(minor_ticks_lon, minor=True)
+        self.ax.set_yticks(major_ticks_lat)
+        self.ax.set_yticks(minor_ticks_lat, minor=True)
 
-        ax.grid(which='minor', alpha=0.2)
-        ax.grid(which='major', alpha=0.5)
+        self.ax.grid(which='minor', alpha=0.2)
+        self.ax.grid(which='major', alpha=0.5)
 
 
     def _set_contours(self, min_value=None, max_value=None):
@@ -68,7 +71,6 @@ class RadialPlotter():
         min_data = -10
         max_data = 40
 
-        
         print("min_data:", min_data, "max_data:", max_data)
 
         # Number of distinct color levels
@@ -89,7 +91,7 @@ class RadialPlotter():
 
 
 
-    def _add_features(self, ax):
+    def _add_features(self):
         """
         Private function for creating features
         """
@@ -103,10 +105,10 @@ class RadialPlotter():
         coast = cfeature.NaturalEarthFeature(category='physical', scale='10m',
             facecolor='none', name='coastline')
 
-        ax.add_feature(cfeature.LAND.with_scale('10m'))
-        ax.add_feature(states_provinces.with_scale('10m'), edgecolor='gray')
-        ax.add_feature(cfeature.BORDERS.with_scale('10m'))
-        ax.add_feature(coast, edgecolor='black')
+        self.ax.add_feature(cfeature.LAND.with_scale('10m'))
+        self.ax.add_feature(states_provinces.with_scale('10m'), edgecolor='gray')
+        self.ax.add_feature(cfeature.BORDERS.with_scale('10m'))
+        self.ax.add_feature(coast, edgecolor='black')
 
 
     def _get_title(self, plot_type, plot_date):
@@ -157,7 +159,7 @@ class RadialPlotter():
 
 
 
-    def _set_circle(self, ax, radius_km):
+    def _set_circle(self, radius_km):
 
         lat_0 = self.metadata.lat
         lon_0 = self.metadata.lon
@@ -178,34 +180,43 @@ class RadialPlotter():
         plt.plot(lons, lats, color='black', linewidth=0.4, alpha=0.5)
 
 
-    def _set_circles(self, ax):
+    def _set_circles(self):
 
         km_line = 25.0
         increment_km = 25.0
 
         while km_line <= self.max_range:
-            self._set_circle(ax, km_line)
+            self._set_circle(km_line)
             km_line += increment_km
+
+
+    def calculate_aspect(self):
+        """
+        Need an actual procedure here.
+        Will be based on lat/lon location.
+        """
+        return 1.4
 
 
     def save_plot(self, min_value=None, max_value=None):
         self._fill_wedge()
         self._set_range()
 
-        ax = plt.axes(projection=ccrs.PlateCarree())
-        ax.set_xlabel('Longitude')
-        ax.set_ylabel('Latitude')
+        aspect = self.calculate_aspect()
+        self.ax = plt.axes(projection=ccrs.PlateCarree(), aspect=aspect)
+        self.ax.set_xlabel('Longitude')
+        self.ax.set_ylabel('Latitude')
 
-        print("ax type:", type(ax))
+        print("ax type:", type(self.ax))
 
-        self._set_grid(ax)
+        self._set_grid()
         self._set_contours(min_value=min_value, max_value=max_value)
-        self._add_features(ax)
+        self._add_features()
         self._set_cross()
-        self._set_circles(ax)
+        self._set_circles()
 
         plt.title(self._get_title(self.label, self.plot_datetime))
-        ax.set_extent(self.range)
+        self.ax.set_extent(self.range)
 
         plot_filename = self.label + self.plot_datetime.strftime("%Y%m%d%H%M.png")
         output_file = os.path.join(self.output_folder, plot_filename)
