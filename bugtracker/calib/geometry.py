@@ -22,16 +22,17 @@ to model beam propagation.
 """
 
 import numpy as np
-import bugtracker
+
+from bugtracker.core.filter import Filter
 
 
-class GeometryFilter:
+class GeometryFilter(Filter):
 
-    def __init__(self, elevation, metadata, grid_info):
-        
+    def __init__(self, metadata, grid_info, elevation):
+
+        super().__init__(metadata, grid_info)
+
         self.elevation = elevation
-        self.metadata = metadata
-        self.grid_info = grid_info
 
         azims = self.grid_info.azims
         gates = self.grid_info.gates
