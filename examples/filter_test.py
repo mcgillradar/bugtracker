@@ -33,9 +33,12 @@ def main():
     dbz_sample = np.zeros((7,720,512), dtype=float)
 
     clutter_filter = bugtracker.calib.clutter.ClutterFilter(metadata, grid_info)
-    clutter_filter.setup(dbz_sample, angles)
+    clutter_filter.setup(angles)
 
-    print(clutter_filter.dbz_3d)
-    print(clutter_filter.filter_3d)
+    clutter_filter.breakdown()
+    clutter_filter.filter_3d[0,:,:].fill(True)
+    clutter_filter.breakdown()
+    clutter_filter.test_method()
+
 
 main()
