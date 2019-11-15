@@ -23,6 +23,17 @@ along with Bugtracker.  If not, see <https://www.gnu.org/licenses/>.
 from bugtracker.core.filter import Filter
 
 class ClutterFilter(Filter):
+    """
+    This class has been designed to load the entire timeseries
+    into memory.
+    """
+
 
     def __init__(self, metadata, grid_info):
         super().__init__(metadata, grid_info)
+
+    def test_method(self):
+        """
+        test_implementation
+        """
+        print("Implemented")

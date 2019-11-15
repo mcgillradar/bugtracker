@@ -139,6 +139,11 @@ class Controller():
         Geometry/clutter/dbz masks are Iris-specific
         """
 
+
+        convol_elevs = 5
+        dopvol_elevs = 4
+
+        
         #dims = (self.grid_info.azims, self.grid_info.gates)
 
         #self.data.geometry_mask = np.zeros(dims, dtype=float)
