@@ -150,25 +150,20 @@ class IrisSet:
 
 class IrisCollection:
 
-    def __init__(self, directory, radar_id, date_range=None):
+    def __init__(self, directory, radar_id):
 
         self.radar_id = radar_id
-
         self.files = []
 
-        if date_range is not None:
-            raise NotImplementedError("Haven't implemented collection from range yet")
-        else:
-            convol_files = glob.glob(os.path.join(directory,"CONVOL*"))
-            dopvol_files = glob.glob(os.path.join(directory,"DOPVOL*"))
-            file_list = convol_files + dopvol_files
+        convol_files = glob.glob(os.path.join(directory,"CONVOL*"))
+        dopvol_files = glob.glob(os.path.join(directory,"DOPVOL*"))
+        file_list = convol_files + dopvol_files
 
-            for file in file_list:
-                self.files.append(IrisFile(file))
+        for file in file_list:
+            self.files.append(IrisFile(file))
 
         self._sort()
         self.sets = self._create_sets()
-
 
 
     def _sort(self):
@@ -247,3 +242,24 @@ class IrisCollection:
                 valid += 1
 
         print(f"{valid}/{num_sets} valid sets.")
+
+
+    def time_range(self, start_time, data_mins):
+        """
+        Extract IrisSet list within the time period
+        """
+
+        end_time = start_time + datetime.timedelta(minutes=data_mins)
+
+        sets_in_range = []
+
+        print(self.sets)
+
+        for current_set in self.sets:
+            current_set_dt = current_set.datetime
+            print(current_set_dt)
+            if current_set_dt >= start_time and current_set_dt <= end_time:
+                sets_in_range.append(current_set)
+
+        sets_in_range.sort(key = lambda x: x.datetime)
+        return sets_in_range

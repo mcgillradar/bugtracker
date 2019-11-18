@@ -1,6 +1,7 @@
 import abc
 
 
+
 class Shape(abc.ABC):
 
     @abc.abstractmethod
@@ -24,5 +25,7 @@ def main():
     #my_shape.my_method(0)
     my_rectangle = Rectangle()
     my_rectangle.my_method(0,1)
+
+    tc = TestClass()
 
 main()

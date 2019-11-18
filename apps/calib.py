@@ -94,10 +94,29 @@ def get_srtm(metadata, grid_info):
 
 
 
-def run_calib(metadata, grid_info, calib_grid):
+def run_calib(args, metadata, grid_info, calib_grid):
 
-    calib_controller = bugtracker.calib.calib.Controller(metadata, grid_info)
+    config = bugtracker.config.load("./bugtracker.json")
+
+    calib_controller = bugtracker.calib.calib.IrisController(metadata, grid_info)
     calib_controller.set_grids(calib_grid)
+
+    time_start = datetime.datetime.strptime(args.timestamp, "%Y%m%d%H%M")
+    data_mins = args.data_hours * 60
+
+    print("Time start:", time_start.strftime("%Y%m%d%H%M"))
+    print("Data mins:", data_mins)
+
+    # Let's get a list of 
+    iris_dir = os.path.join(config['archive_dir'], args.station)
+    print(iris_dir)
+    iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
+    calib_sets = iris_collection.time_range(time_start, data_mins)
+
+
+    for data_set in calib_sets:
+        print(data_set.datetime)
+
     calib_controller.create_masks()
     calib_controller.save()
 
@@ -107,6 +126,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("timestamp", help="Data timestamp YYYYmmddHHMM")
     parser.add_argument("station", help="3 letter station code")
+    parser.add_argument("-dt", "--data_hours", type=int, default=6)
     parser.add_argument('-d', '--debug', action='store_true', help="Debug plotting")
     parser.add_argument('-c', '--clear', action='store_true', help="Clear cache")
     # Reset
@@ -125,7 +145,7 @@ def main():
     grid_info = bugtracker.core.samples.grid_info()
     calib_grid = get_srtm(metadata, grid_info)
 
-    run_calib(metadata, grid_info, calib_grid)
+    run_calib(args, metadata, grid_info, calib_grid)
 
 
 main()

@@ -21,6 +21,7 @@ The clutter mask
 """
 
 import os
+import abc
 
 import numpy as np
 import netCDF4 as nc
@@ -98,14 +99,13 @@ class Data:
         dset.close()
 
 
-class Controller():
+class Controller(abc.ABC):
 
     def __init__(self, metadata, grid_info):
 
         self.config = bugtracker.config.load("./bugtracker.json")
         self.metadata = metadata
         self.grid_info = grid_info
-
         self.data = Data(metadata, grid_info)
 
 
@@ -133,6 +133,20 @@ class Controller():
         self.data.lons = calib_grid.lons
         self.data.altitude = calib_grid.altitude
 
+    @abc.abstractmethod
+    def create_masks(self):
+        """
+        Geometry/clutter/dbz masks are filetype-specific
+        """
+        pass
+
+
+class IrisController(Controller):
+
+    def __init__(self, metadata, grid_info):
+
+        super().__init__(metadata, grid_info)
+
 
     def create_masks(self):
         """
@@ -143,10 +157,25 @@ class Controller():
         convol_elevs = 5
         dopvol_elevs = 4
 
-        
+
         #dims = (self.grid_info.azims, self.grid_info.gates)
 
         #self.data.geometry_mask = np.zeros(dims, dtype=float)
         #self.data.clutter_mask = np.zeros(dims, dtype=float)
 
-        pass
+
+class OdimController(Controller):
+
+    def __init__(self, metadata, grid_info):
+
+        super().__init__(metadata, grid_info)
+        raise NotImplementedError("OdimH5 filetype not currently supported.")
+
+
+class NexradController(Controller):
+
+    def __init__(self, metadata, grid_info):
+
+        super().__init__(metadata, grid_info)
+        raise NotImplementedError("NEXRAD filetype not currently supported.")
+
