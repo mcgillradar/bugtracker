@@ -113,11 +113,13 @@ def run_calib(args, metadata, grid_info, calib_grid):
     iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
     calib_sets = iris_collection.time_range(time_start, data_mins)
 
-
     for data_set in calib_sets:
         print(data_set.datetime)
 
-    calib_controller.create_masks()
+    calib_controller.set_calib_data(calib_sets)
+    calib_controller.process_convol()
+    calib_controller.process_dopvol()
+
     calib_controller.save()
 
 

@@ -22,12 +22,13 @@ The clutter mask
 
 import os
 import abc
+import time
 
 import numpy as np
 import netCDF4 as nc
 
 import bugtracker.config
-
+import bugtracker.core.utils
 
 class Grid:
 
@@ -140,6 +141,10 @@ class Controller(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def set_calib_data(self):
+        pass
+
 
 class IrisController(Controller):
 
@@ -148,10 +153,57 @@ class IrisController(Controller):
         super().__init__(metadata, grid_info)
 
 
+    def set_calib_data(self, calib_sets):
+
+        self.calib_sets = calib_sets
+
+        print("Num calib sets:", len(calib_sets))
+
+        timesteps = len(calib_sets)
+        grid_cells = self.grid_info.azims * self.grid_info.gates
+
+        convol_levels = 5
+        dopvol_levels = 3
+        bytes_per_float = 8
+        requested_mem = bytes_per_float * convol_levels * len(calib_sets) * grid_cells
+
+        bugtracker.core.utils.check_memory(requested_mem)
+
+        dopvol_dims = None
+        convol_dims = None
+
+        self.dopvol_timeseries = np.ma.zeros(dopvol_dims, dtype=float)
+        self.convol_timeseries = np.ma.zeros(convol_dims, dtype=float)
+
+        c = input("Unexpected? (y/n)")
+
+
+    def process_convol(self):
+        
+        convol_levels = 5
+
+        azims = self.grid_info.azims
+        gates = self.grid_info.gates
+
+        time_steps = len(self.calib_sets)
+        dims = (time_steps, convol_levels, azims, gates)
+        convol = np.zeros(dims, dtype=float)
+
+        print("Item size:", convol.itemsize)
+        print("%d bytes" % (convol.size * convol.itemsize))
+
+
+
+
+    def process_dopvol(self):
+        pass
+
+
     def create_masks(self):
         """
         Geometry/clutter/dbz masks are Iris-specific
         """
+
 
 
         convol_elevs = 5

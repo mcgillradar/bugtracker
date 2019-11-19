@@ -27,6 +27,7 @@ testing. Production software should *NOT* be using these test
 functions.
 """
 
+import os
 import datetime
 
 import numpy as np
@@ -76,3 +77,24 @@ def grid_info():
     azim_step = 0.5
     grid = bugtracker.core.grid.GridInfo(gates, azims, gate_step, azim_step)
     return grid
+
+
+
+def iris_set():
+    """
+    Return sample IrisSet from some XAM radar set
+    """
+
+    config = bugtracker.config.load("./bugtracker.json")
+    radar_id = "xam"
+    archive_dir = config['archive_dir']
+    radar_dir = os.path.join(archive_dir, radar_id)
+    iris_collection = bugtracker.io.iris.IrisCollection(radar_dir, radar_id)
+
+    sample_datetime = datetime.datetime(2013, 7, 17, 19, 50, 0)
+    sample_set = iris_collection.closest_set(sample_datetime)
+
+    if sample_set is None:
+        raise ValueError("Cannot find sample IrisSet")
+
+    return sample_set
