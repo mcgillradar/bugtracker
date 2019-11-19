@@ -126,18 +126,4 @@ class Filter(abc.ABC):
         self.vertical_angles = angles
         self.set_filter(fill_entry=False)
 
-    @abc.abstractmethod
-    def load_data(self):
-        """
-        Description
-        """
-        pass
-
-    @abc.abstractmethod
-    def check_data(self):
-        """
-        Description
-        """
-        pass
-
 

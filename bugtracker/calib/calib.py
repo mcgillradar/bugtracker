@@ -29,6 +29,7 @@ import netCDF4 as nc
 
 import bugtracker.config
 import bugtracker.core.utils
+from bugtracker.calib.clutter import ClutterFilter
 
 class Grid:
 
@@ -151,48 +152,32 @@ class IrisController(Controller):
     def __init__(self, metadata, grid_info):
 
         super().__init__(metadata, grid_info)
+        self.convol_clutter = ClutterFilter(metadata, grid_info)
+        self.dopvol_clutter = ClutterFilter(metadata, grid_info)
+
+
+    def init_angles(self, sample_set):
+
+
+        dopvol_angles = sample_set.get_elevs("dopvol")
+        convol_angles = sample_set.get_elevs("convol")
+
+        self.convol_clutter.setup(convol_angles)
+        self.dopvol_clutter.setup(dopvol_angles)
 
 
     def set_calib_data(self, calib_sets):
 
         self.calib_sets = calib_sets
 
-        print("Num calib sets:", len(calib_sets))
+        if len(calib_sets) < 1:
+            raise ValueError("Invalid number of calib sets")
 
-        timesteps = len(calib_sets)
-        grid_cells = self.grid_info.azims * self.grid_info.gates
-
-        convol_levels = 5
-        dopvol_levels = 3
-        bytes_per_float = 8
-        requested_mem = bytes_per_float * convol_levels * len(calib_sets) * grid_cells
-
-        bugtracker.core.utils.check_memory(requested_mem)
-
-        dopvol_dims = None
-        convol_dims = None
-
-        self.dopvol_timeseries = np.ma.zeros(dopvol_dims, dtype=float)
-        self.convol_timeseries = np.ma.zeros(convol_dims, dtype=float)
-
-        c = input("Unexpected? (y/n)")
+        self.init_angles(calib_sets[0])
 
 
     def process_convol(self):
-        
-        convol_levels = 5
-
-        azims = self.grid_info.azims
-        gates = self.grid_info.gates
-
-        time_steps = len(self.calib_sets)
-        dims = (time_steps, convol_levels, azims, gates)
-        convol = np.zeros(dims, dtype=float)
-
-        print("Item size:", convol.itemsize)
-        print("%d bytes" % (convol.size * convol.itemsize))
-
-
+        pass
 
 
     def process_dopvol(self):
@@ -200,20 +185,52 @@ class IrisController(Controller):
 
 
     def create_masks(self):
+        pass
+
+    def save_masks(self):
         """
         Geometry/clutter/dbz masks are Iris-specific
         """
 
+        dopvol_angles = self.dopvol_clutter.vertical_angles
+        convol_angles = self.convol_clutter.vertical_angles
 
+        num_dopvol_angles = len(dopvol_angles)
+        num_convol_angles = len(convol_angles)
 
-        convol_elevs = 5
-        dopvol_elevs = 4
+        print("Dopvol angles:", dopvol_angles)
+        print("Convol angles:", convol_angles)
 
+        output_file = bugtracker.core.cache.calib_filepath(self.metadata, self.grid_info)
 
-        #dims = (self.grid_info.azims, self.grid_info.gates)
+        azims = self.grid_info.azims
+        gates = self.grid_info.gates
 
-        #self.data.geometry_mask = np.zeros(dims, dtype=float)
-        #self.data.clutter_mask = np.zeros(dims, dtype=float)
+        dset = nc.Dataset(output_file, mode="r+")
+        dset.createDimension("dopvol_angles", num_dopvol_angles)
+        dset.createDimension("convol_angles", num_convol_angles)
+
+        dopvol_dims = ('dopvol_angles', 'azims', 'gates')
+        convol_dims = ('convol_angles', 'azims', 'gates')
+
+        nc_convol_angles = dset.createVariable("convol_angles", float, ('convol_angles'))
+        nc_dopvol_angles = dset.createVariable("dopvol_angles", float, ('dopvol_angles'))
+
+        nc_convol_angles[:] = convol_angles[:]
+        nc_dopvol_angles[:] = dopvol_angles[:]
+
+        # Unsigned integer 1 bytes, to save space.
+        # 0 corresponds to no mask, 1 corresponds to mask (Filter)
+        nc_convol_clutter = dset.createVariable("convol_clutter", 'u1', convol_dims)
+        nc_dopvol_clutter = dset.createVariable("dopvol_clutter", 'u1', dopvol_dims)
+
+        print("convol shape:", self.convol_clutter.filter_3d.shape)
+        print("dopvol_shape:", self.dopvol_clutter.filter_3d.shape)
+
+        nc_convol_clutter[:,:,:] = self.convol_clutter.filter_3d[:,:,:]
+        nc_dopvol_clutter[:,:,:] = self.dopvol_clutter.filter_3d[:,:,:]
+
+        dset.close()
 
 
 class OdimController(Controller):

@@ -21,8 +21,10 @@ from bugtracker.core.filter import Filter
 
 class PrecipFilter(Filter):
 
-    def __init__(self, metadata, grid_info):
+    def __init__(self, metadata, grid_info, angles):
         super().__init__(metadata, grid_info)
+
+        self.setup(angles)
 
 
     def verify_dims(self):

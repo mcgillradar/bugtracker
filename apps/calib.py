@@ -121,6 +121,7 @@ def run_calib(args, metadata, grid_info, calib_grid):
     calib_controller.process_dopvol()
 
     calib_controller.save()
+    calib_controller.save_masks()
 
 
 def main():
