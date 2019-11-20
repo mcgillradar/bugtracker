@@ -116,10 +116,11 @@ def run_calib(args, metadata, grid_info, calib_grid):
     for data_set in calib_sets:
         print(data_set.datetime)
 
-    calib_controller.set_calib_data(calib_sets)
-    calib_controller.process_convol()
-    calib_controller.process_dopvol()
+    threshold = 0.8
 
+    calib_controller.set_calib_data(calib_sets)
+    calib_controller.create_masks(threshold)
+    calib_controller.print_masks()
     calib_controller.save()
     calib_controller.save_masks()
 

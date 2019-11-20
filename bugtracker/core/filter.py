@@ -52,6 +52,10 @@ class Filter(abc.ABC):
         self.filter_3d = None
         self.vertical_angles = None
 
+
+    def get_dims(self):
+        return self.filter_3d.shape
+
     def check_dims(self):
         """
         Making sure dimensions correspond

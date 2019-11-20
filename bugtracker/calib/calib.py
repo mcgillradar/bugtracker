@@ -158,7 +158,6 @@ class IrisController(Controller):
 
     def init_angles(self, sample_set):
 
-
         dopvol_angles = sample_set.get_elevs("dopvol")
         convol_angles = sample_set.get_elevs("convol")
 
@@ -176,20 +175,98 @@ class IrisController(Controller):
         self.init_angles(calib_sets[0])
 
 
-    def process_convol(self):
-        pass
+    def count_instances(self, iris_set):
+        """
+        Takes in a IrisSet object and counts up all instances
+        above a threshold, adding to instances counters.
+        """
+
+        iris_data = bugtracker.core.iris.IrisData(iris_set)
+        iris_data.fill_grids()
+
+        dbz_threshold = 20.0
+
+        dopvol_dims = self.dopvol_clutter.get_dims()
+        convol_dims = self.convol_clutter.get_dims()
+
+        if iris_data.dopvol.shape != dopvol_dims:
+            raise ValueError(f"Incompatible shape: {dopvol_dims}")
+
+        if iris_data.convol.shape != convol_dims:
+            raise ValueError(f"Incompatible shape: {convol_dims}")
+
+        print("dopvol type:", type(iris_data.dopvol))
+        print("convol type:", type(iris_data.convol))
+
+        dopvol_above = iris_data.dopvol > dbz_threshold
+        convol_above = iris_data.convol > dbz_threshold
+
+        dopvol_above = dopvol_above.filled(fill_value=False)
+        convol_above = convol_above.filled(fill_value=False)
+
+        self.dopvol_instances = self.dopvol_instances + dopvol_above.astype(int)
+        self.convol_instances = self.convol_instances + convol_above.astype(int)
 
 
-    def process_dopvol(self):
-        pass
+    def create_masks(self, threshold):
+        
+        dopvol_dims = self.dopvol_clutter.get_dims()
+        convol_dims = self.convol_clutter.get_dims()
+
+        # Counters for number of dopvol/convol above threshold
+        self.dopvol_instances = np.zeros(dopvol_dims, dtype=int)
+        self.convol_instances = np.zeros(convol_dims, dtype=int)
+
+        num_timeseries = len(self.calib_sets)
+        if num_timeseries == 0:
+            raise ValueError("No files in calibration set.")
+
+        for iris_set in self.calib_sets:
+            self.count_instances(iris_set)
+
+        # Normalization
+        self.norm_dopvol = self.dopvol_instances / float(num_timeseries)
+        self.norm_convol = self.convol_instances / float(num_timeseries)
+
+        prev_shape_dopvol = self.dopvol_clutter.filter_3d.shape
+        prev_shape_convol = self.convol_clutter.filter_3d.shape
+
+        self.dopvol_clutter.filter_3d = self.norm_dopvol > threshold
+        self.convol_clutter.filter_3d = self.norm_convol > threshold
+
+        post_shape_dopvol = self.dopvol_clutter.filter_3d.shape
+        post_shape_convol = self.convol_clutter.filter_3d.shape
+
+        if prev_shape_dopvol != post_shape_dopvol:
+            raise ValueError("Incompatible shapes: {prev_shape_dopvol} != {post_shape_dopvol}")
+
+        if prev_shape_convol != post_shape_convol:
+            raise ValueError("Incompatible shapes: {prev_shape_convol} != {post_shape_convol}")
 
 
-    def create_masks(self):
-        pass
+    def print_mask(self, label, clutter_filter):
+        
+        print("Showing stats for filter:", label)
+
+        num_angles = len(clutter_filter.vertical_angles)
+        for x in range(0, num_angles):
+            print("Current angle:", clutter_filter.vertical_angles[x])
+            current_level = (clutter_filter.filter_3d[x,:,:]).astype(int)
+            above = current_level.sum()
+            total = current_level.size
+            percent = above / float(total)
+            print(f"Num above threshold: {above}/{total}")
+            print(f"Percentage: {percent}")
+
+    def print_masks(self):
+        
+        self.print_mask("dopvol", self.dopvol_clutter)
+        self.print_mask("convol", self.convol_clutter)
 
     def save_masks(self):
         """
         Geometry/clutter/dbz masks are Iris-specific
+        This could probably be refactored to avoid repeating
         """
 
         dopvol_angles = self.dopvol_clutter.vertical_angles
