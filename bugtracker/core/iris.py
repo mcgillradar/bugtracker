@@ -59,6 +59,17 @@ class IrisProcessor:
 
 
 
+def iris_grid():
+
+    gates = 256 * 2
+    azims = 720
+    gate_step = 500.0
+    azim_step = 0.5
+
+    grid_info = bugtracker.core.grid.GridInfo(gates, azims, gate_step, azim_step)
+    return grid_info
+
+
 class IrisData:
 
     def __init__(self, iris_set):
@@ -72,13 +83,13 @@ class IrisData:
         self.convol_scans = self.config["iris_convol_scans"]
         self.dopvol_scans = 3 
 
+        # TODO: Should not be hardcoded
         gates = 256 * 2
         azims = 720
         gate_step = 500.0
         azim_step = 0.5
 
-        self.grid = bugtracker.core.grid.GridInfo(gates, azims, gate_step, azim_step)
-        
+        self.grid = iris_grid()
         self.convol_raw = bugtracker.io.iris.extract_dbz(iris_set.convol)
         self.dopvol_1A_raw = bugtracker.io.iris.extract_dbz(iris_set.dopvol_1A)
         self.dopvol_1B_raw = bugtracker.io.iris.extract_dbz(iris_set.dopvol_1B)

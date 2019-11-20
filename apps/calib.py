@@ -145,8 +145,14 @@ def main():
 
     cache_manager.make_folders()
 
-    metadata = bugtracker.core.samples.metadata()
-    grid_info = bugtracker.core.samples.grid_info()
+    config = bugtracker.config.load("./bugtracker.json")
+    iris_dir = os.path.join(config['archive_dir'], args.station)
+    iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
+    if len(iris_collection.sets) == 0:
+        raise ValueError("Invalid length")
+
+    metadata = bugtracker.core.metadata.from_iris_set(iris_collection.sets[0])
+    grid_info = bugtracker.core.iris.iris_grid()
     calib_grid = get_srtm(metadata, grid_info)
 
     run_calib(args, metadata, grid_info, calib_grid)
