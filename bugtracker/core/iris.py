@@ -83,12 +83,6 @@ class IrisData:
         self.convol_scans = self.config["iris_convol_scans"]
         self.dopvol_scans = 3 
 
-        # TODO: Should not be hardcoded
-        gates = 256 * 2
-        azims = 720
-        gate_step = 500.0
-        azim_step = 0.5
-
         self.grid = iris_grid()
         self.convol_raw = bugtracker.io.iris.extract_dbz(iris_set.convol)
         self.dopvol_1A_raw = bugtracker.io.iris.extract_dbz(iris_set.dopvol_1A)

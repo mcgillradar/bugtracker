@@ -19,36 +19,57 @@ along with Bugtracker.  If not, see <https://www.gnu.org/licenses/>.
 """
 Currently unused processor class
 """
+import os
+import abc
 
 import numpy as np
+import netcdf4 as nc
 
 import bugtracker
 
 
-class Processor:
+class Processor(abc.ABC):
 
-    def __init__(self):
+    def __init__(self, metadata, grid_info):
 
-        self.grid_info = bugtracker.core.grid.GridInfo(1000, 360, 125.0, 0.5)
-        azims = self.grid_info.azims
-        gates = self.grid_info.gates
-        dims = (azims, gates)
-        self.data = np.zeros(dims, dtype=float)
+        self.metadata = metadata
+        self.grid_info = grid_info
+        self.calib_file = bugtracker.core.cache.calib_filepath(metadata, grid_info)
+
+        if not os.path.isfile(self.calib_file):
+            raise FileNotFoundError("Missing calib file")
+
+        self.load_universal_calib()
 
 
-    def filter(self):
-        pass
+    def load_universal_calib(self):
+        """
+        Load parts of the calibration file that are universal
+        to all data types (i.e. lats, lons, altitude)
+        """
+        
+        calib_file = self.calib_file
+        dset = nc.Dataset()
 
-    def output_netcdf(self):
+
+    @abc.abstractmethod
+    def load_specific_calib(self):
+        """
+        Load parts of calib file that are specific to a particular
+        filetype.
+        """
         pass
 
 
 class IrisProcessor(Processor):
 
-    def __init__(self):
+    def __init__(self, metadata, grid_info):
+        super().__init__(metadata, grid_info)
+        self.load_specific_calib()
 
-        super().__init__()
 
+    def load_specific_calib(self):
+        pass
 
 class OdimProcessor(Processor):
     """
