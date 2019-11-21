@@ -32,9 +32,12 @@ class Processor(abc.ABC):
 
     def __init__(self, metadata, grid_info):
 
+        self.config = bugtracker.config.load("./bugtracker.json")
+
         self.metadata = metadata
         self.grid_info = grid_info
         self.calib_file = bugtracker.core.cache.calib_filepath(metadata, grid_info)
+        self.plotter = None
 
         if not os.path.isfile(self.calib_file):
             raise FileNotFoundError("Missing calib file")
@@ -75,6 +78,25 @@ class Processor(abc.ABC):
         if self.altitude.shape != polar_dims:
             raise ValueError(f"Altitude grid invalid dims: {self.altitude.shape}")
 
+
+    def init_plotter(self):
+        """
+        Activate the RadialPlotter. This code may need to be significantly
+        modified if we need to do parallel plotting (multi-cpu to speed up
+        the plotting of a large set of files).
+        """
+
+        radar_id = self.metadata.radar_id
+        plot_dir = self.config['plot_dir']
+        output_folder = os.path.join(plot_base, radar_id)
+
+        if not os.path.isdir(plot_dir):
+            FileNotFoundError(f"This folder should have been created {plot_dir}")
+
+        if not os.path.isdir(output_folder):
+            os.mkdir(output_folder)
+
+        self.plotter = RadialPlotter(self.lats, self.lons, output_folder)
 
     @abc.abstractmethod
     def load_specific_calib(self):
@@ -137,6 +159,18 @@ class IrisProcessor(Processor):
 
         if self.dopvol_clutter.shape != dopvol_dim:
             raise ValueError(f"Invalid dopvol dimensions: {self.dopvol_clutter.shape}")
+
+
+    def process_set(self, iris_set):
+
+        iris_data = bugtracker.core.iris.IrisData(iris_set)
+
+        
+
+    def process_sets(self, iris_sets):
+
+        for iris_set in iris_sets:
+            self.process_set(iris_set)
 
 
 class OdimProcessor(Processor):

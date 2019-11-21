@@ -68,7 +68,7 @@ def get_closest_set(args, config):
     iris_coll.check_sets()
 
     pattern = "%Y%m%d%H%M"
-    search_datetime = datetime.datetime.strptime(args.timestamp, pattern)
+    search_datetime = datetime.datetime.strptime(args.start, pattern)
     closest_set = iris_coll.closest_set(search_datetime)
 
     if closest_set is None:
@@ -85,15 +85,26 @@ def main():
 
     # First step "minimal", create a batch from command-line inputs
     parser = argparse.ArgumentParser()
-    parser.add_argument("timestamp", help="Data timestamp YYYYmmddHHMM")
+    parser.add_argument("start", help="Data timestamp YYYYmmddHHMM")
     parser.add_argument("station", help="3 letter station code")
+    parser.add_argument("-dt", "--data_hours", type=int, default=0)
     parser.add_argument("-r", "--range", default=100, type=int, help="Maximum range (km)")
     parser.add_argument('-d', '--debug', action='store_true', help="Debug plotting")
 
     args = parser.parse_args()
     check_args(args)
 
-    closest_set = get_closest_set(args, config)
+    iris_set_list = []
+
+    # If time is 0, that means get only the closest
+    if args.data_hours == 0:
+        closest_set = get_closest_set(args, config)
+        iris_set_list.append(closest_set)
+    else:
+        time_start = datetime.datetime.strptime(args.start, "%Y%m%d%H%M")
+        data_mins = args.data_hours * 60
+        iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
+        iris_set_list = iris_collection.time_range(time_start, data_mins)
 
     metadata = bugtracker.core.metadata.from_iris_set(closest_set)
     grid_info = bugtracker.core.iris.iris_grid()
@@ -101,6 +112,7 @@ def main():
     print("grid_info:", grid_info)
 
     processor = bugtracker.io.processor.IrisProcessor(metadata, grid_info)
-
+    processor.init_plotter()
+    processor.process_sets(iris_set_list)
 
 main()
