@@ -23,7 +23,7 @@ import os
 import abc
 
 import numpy as np
-import netcdf4 as nc
+import netCDF4 as nc
 
 import bugtracker
 

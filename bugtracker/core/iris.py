@@ -84,6 +84,10 @@ class IrisData:
         self.dopvol_scans = 3 
 
         self.grid = iris_grid()
+
+        azims = self.grid.azims
+        gates = self.grid.gates
+
         self.convol_raw = bugtracker.io.iris.extract_dbz(iris_set.convol)
         self.dopvol_1A_raw = bugtracker.io.iris.extract_dbz(iris_set.dopvol_1A)
         self.dopvol_1B_raw = bugtracker.io.iris.extract_dbz(iris_set.dopvol_1B)

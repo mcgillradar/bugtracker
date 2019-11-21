@@ -77,7 +77,7 @@ class RadialPlotter():
         self.ax.grid(which='major', alpha=0.5)
 
 
-    def _set_contours(self, min_value=None, max_value=None):
+    def _set_contours(self, min_value=(-10), max_value=40):
 
         # It is logical to take the integer floor(min) and ceil(max) values
         # of the data array, given the ranges we are dealing with. Directly taking
@@ -86,9 +86,9 @@ class RadialPlotter():
         # TODO: This currently throws a plotting exception if the values
         # are equal to each other and are an integer (i.e. the exceptional case that all values are zero)
 
-        min_data = -10
-        max_data = 40
-
+        min_data = min_value
+        max_data = max_value
+        
         print("min_data:", min_data, "max_data:", max_data)
 
         # Number of distinct color levels

@@ -36,6 +36,7 @@ import argparse
 from contextlib import contextmanager
 
 import numpy as np
+import netCDF4 as nc
 
 @contextmanager
 def suppress_stdout():
@@ -93,6 +94,59 @@ def get_srtm(metadata, grid_info):
     return final_grid
 
 
+def plot_calib_graph(args, metadata, radial_plotter, plot_type, angle, data):
+    time_start = datetime.datetime.strptime(args.timestamp, "%Y%m%d%H%M")
+    label = f"clutter_{plot_type}_{angle}_"
+    max_range = 150
+
+    radial_plotter.set_data(data, label, time_start, metadata, max_range)
+    radial_plotter.save_plot(min_value=0, max_value=1)
+
+
+def plot_calib_graphs(args, config, metadata, grid_info):
+    """
+    Plot output graphs
+    """
+
+    nc_file = bugtracker.core.cache.calib_filepath(metadata, grid_info)
+
+    plot_dir = config['plot_dir']
+    plot_subdir = os.path.join(plot_dir, "calib_plots")
+
+    if not os.path.isdir(plot_dir):
+        os.mkdir(plot_dir)
+
+    if not os.path.isdir(plot_subdir):
+        os.mkdir(plot_subdir)
+
+    dset = nc.Dataset(nc_file, mode='r')
+
+    convol_clutter = dset.variables['convol_clutter'][:,:,:]
+    dopvol_clutter = dset.variables['dopvol_clutter'][:,:,:]
+
+    convol_angles = dset.variables['convol_angles']
+    dopvol_angles = dset.variables['dopvol_angles']
+
+    lats = dset.variables['lats'][:,:]
+    lons = dset.variables['lons'][:,:]
+
+    radial_plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, plot_subdir)
+
+    print("Plotting convol")
+    for x in range(0, len(convol_angles)):
+        angle = convol_angles[x]
+        slice_data = convol_clutter[x,:,:]
+        plot_calib_graph(args, metadata, radial_plotter, "convol", angle, slice_data)
+
+    print("Plotting dopvol")
+    for x in range(0, len(dopvol_angles)):
+        angle = dopvol_angles[x]
+        slice_data = dopvol_clutter[x,:,:]
+        plot_calib_graph(args, metadata, radial_plotter, "dopvol", angle, slice_data)
+
+    dset.close()
+
+
 
 def run_calib(args, metadata, grid_info, calib_grid):
 
@@ -125,6 +179,8 @@ def run_calib(args, metadata, grid_info, calib_grid):
     calib_controller.save_masks()
 
 
+
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -133,6 +189,7 @@ def main():
     parser.add_argument("-dt", "--data_hours", type=int, default=6)
     parser.add_argument('-d', '--debug', action='store_true', help="Debug plotting")
     parser.add_argument('-c', '--clear', action='store_true', help="Clear cache")
+    parser.add_argument('-p', '--plot', action='store_true', help="Plot diagnostic graphs")
     # Reset
 
     args = parser.parse_args()
@@ -155,7 +212,10 @@ def main():
     grid_info = bugtracker.core.iris.iris_grid()
     calib_grid = get_srtm(metadata, grid_info)
 
-    run_calib(args, metadata, grid_info, calib_grid)
+    if args.plot:
+        plot_calib_graphs(args, config, metadata, grid_info)
+    else:
+        run_calib(args, metadata, grid_info, calib_grid)
 
 
 main()
