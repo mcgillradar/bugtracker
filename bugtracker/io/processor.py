@@ -26,7 +26,7 @@ import numpy as np
 import netCDF4 as nc
 
 import bugtracker
-
+from bugtracker.core.precip import PrecipFilter
 
 class Processor(abc.ABC):
 
@@ -161,11 +161,71 @@ class IrisProcessor(Processor):
             raise ValueError(f"Invalid dopvol dimensions: {self.dopvol_clutter.shape}")
 
 
+    def plot_iris(self, iris_data, label_prefix):
+        """
+        Plots a set of iris data
+        """
+
+        print("Plotting:", label_prefix)
+
+        if self.plotter is None:
+            raise ValueError("Plotter has not been initialized!")
+
+
+
+
+    def impose_filter(self, iris_data, np_convol, np_dopvol):
+        """
+        Standin method for applying joint filters
+        """
+
+        raw_dopvol_shape = iris_data.dopvol.shape
+        raw_convol_shape = iris_data.convol.shape
+
+        raw_dopvol_mask = np.ma.getmask(iris_data.dopvol)
+        raw_convol_mask = np.ma.getmask(iris_data.convol)
+
+        dopvol_mask = np.ma.mask_or(np_dopvol, raw_dopvol_mask)
+        convol_mask = np.ma.mask_or(np_convol, raw_convol_mask)
+
+        iris_data.dopvol = np.ma.array(iris_data.dopvol, mask=dopvol_mask)
+        iris_data.convol = np.ma.array(iris_data.convol, mask=convol_mask)
+
+        filtered_dopvol_shape = iris_data.dopvol.shape
+        filtered_convol_shape = iris_data.convol.shape
+
+        if raw_dopvol_shape != filtered_dopvol_shape:
+            raise ValueError("Error in DOPVOL array size")
+
+        if raw_convol_shape != filtered_convol_shape:
+            raise ValueError("Error in new CONVOL array size")
+
+
     def process_set(self, iris_set):
 
         iris_data = bugtracker.core.iris.IrisData(iris_set)
+        iris_data.fill_grids()
 
+        # plot the unmodified files
+        self.plot_iris(iris_data, "raw")
         
+        # construct the PrecipFilter from iris_set
+        convol_precip = PrecipFilter(self.metadata, self.grid_info, self.convol_angles)
+        dopvol_precip = PrecipFilter(self.metadata, self.grid_info, self.dopvol_angles)
+
+        # For now, we are just using the ClutterFilter
+        # Eventually, we will want to create a JointFilter from all 3
+        # Here we are just using boolean numpy arrays
+
+        convol_joint = self.convol_clutter.astype(bool)
+        dopvol_joint = self.dopvol_clutter.astype(bool)
+
+        # modify the files based on filters
+        self.impose_filter(iris_data, convol_joint, dopvol_joint)
+
+        # plot modified files
+        self.plot_iris(iris_data, "filtered")
+
 
     def process_sets(self, iris_sets):
 
