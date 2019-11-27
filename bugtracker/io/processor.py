@@ -22,9 +22,11 @@ Currently unused processor class
 import os
 import abc
 import datetime
+import time
 
 import numpy as np
 import netCDF4 as nc
+from scipy import stats
 
 import bugtracker
 from bugtracker.core.precip import PrecipFilter
@@ -222,24 +224,91 @@ class IrisProcessor(Processor):
             raise ValueError("Error in new CONVOL array size")
 
 
+    def determine_zone_slope(self, iris_data, azim_zone, gate_zone):
+        
+        # We will only use CONVOL scans for determining slopes
+
+        azim_region = self.config['precip']['azim_region']
+        gate_region = self.config['precip']['gate_region']
+        
+        min_azim = azim_zone * azim_region
+        max_azim = (azim_zone + 1) * azim_region
+
+        min_gate = gate_zone * gate_region
+        max_gate = (gate_zone + 1) * gate_region
+
+        angle_list = []
+        dbz_list = []
+
+        for x in range(0, len(self.convol_angles)):
+            angle = self.convol_angles[x]
+            zone_data = iris_data.convol[x,min_azim:max_azim,min_gate:max_gate]
+            zone_flat = list(zone_data.flatten())
+
+            for dbz in zone_flat:
+                angle_list.append(angle)
+                dbz_list.append(dbz)
+
+        if len(angle_list) != len(dbz_list):
+            raise ValueError("Zone slope error")
+
+        slope, intercept, r_value, p_value, std_err = stats.linregress(angle_list, dbz_list)
+        return slope
+
+
+    def filter_precip(self, convol_precip, dopvol_precip, iris_data):
+
+        t0 = time.time()
+
+        self.config = bugtracker.config.load("./bugtracker.json")
+        azim_region = self.config['precip']['azim_region']
+        gate_region = self.config['precip']['gate_region']
+        max_slope = self.config['precip']['max_dbz_per_degree']
+
+        if self.grid_info.azims % azim_region != 0:
+            raise ValueError(f"Choose value of azim_region that divides {self.grid_info.azims} evenly.")
+
+        if self.grid_info.gates % gate_region != 0:
+            raise ValueError(f"Choose value of gate_region that divides {self.grid_info.gates} evenly")
+
+        azim_zones = self.grid_info.azims // azim_region
+        gate_zones = self.grid_info.gates // gate_region
+
+        for x in range(0, azim_zones):
+            for y in range(0, gate_zones):
+                slope = self.determine_zone_slope(iris_data, x, y)
+                if slope > max_slope:
+                    min_azim = x * azim_region
+                    max_azim = (x + 1) * azim_region
+
+                    min_gate = y * gate_region
+                    max_gate = (y + 1) * gate_region
+
+                    convol_precip.filter_3d[:,min_azim:max_azim,min_gate:max_gate] = True
+                    dopvol_precip.filter_3d[:,min_azim:max_azim,min_gate:max_gate] = True
+
+        t1 = time.time()
+        print("Total time for precip filter:", t1 - t0)
+
+
+
     def process_set(self, iris_set):
 
         iris_data = bugtracker.core.iris.IrisData(iris_set)
         iris_data.fill_grids()
 
         # plot the unmodified files
-        #self.plot_iris(iris_data, "raw")
+        self.plot_iris(iris_data, "raw")
         
         # construct the PrecipFilter from iris_set
         convol_precip = PrecipFilter(self.metadata, self.grid_info, self.convol_angles)
         dopvol_precip = PrecipFilter(self.metadata, self.grid_info, self.dopvol_angles)
 
-        # For now, we are just using the ClutterFilter
-        # Eventually, we will want to create a JointFilter from all 3
-        # Here we are just using boolean numpy arrays
+        self.filter_precip(convol_precip, dopvol_precip, iris_data)
 
-        convol_joint = self.convol_clutter.astype(bool)
-        dopvol_joint = self.dopvol_clutter.astype(bool)
+        # Combining ClutterFilter with PrecipFilter
+        convol_joint = np.logical_or(self.convol_clutter.astype(bool), convol_precip.filter_3d)
+        dopvol_joint = np.logical_or(self.dopvol_clutter.astype(bool), dopvol_precip.filter_3d)
 
         # modify the files based on filters
         self.impose_filter(iris_data, convol_joint, dopvol_joint)
