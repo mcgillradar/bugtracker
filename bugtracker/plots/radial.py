@@ -236,7 +236,7 @@ class RadialPlotter():
         plt.title(self._get_title(self.label, self.plot_datetime))
         self.ax.set_extent(self.range)
 
-        plot_filename = self.label + self.plot_datetime.strftime("%Y%m%d%H%M.png")
+        plot_filename = self.plot_datetime.strftime("%Y%m%d%H%M") + "_" + self.label + ".png"
         output_file = os.path.join(self.output_folder, plot_filename)
 
         plt.savefig(output_file, dpi=200)

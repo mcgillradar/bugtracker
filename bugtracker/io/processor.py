@@ -21,6 +21,7 @@ Currently unused processor class
 """
 import os
 import abc
+import datetime
 
 import numpy as np
 import netCDF4 as nc
@@ -88,7 +89,7 @@ class Processor(abc.ABC):
 
         radar_id = self.metadata.radar_id
         plot_dir = self.config['plot_dir']
-        output_folder = os.path.join(plot_base, radar_id)
+        output_folder = os.path.join(plot_dir, radar_id)
 
         if not os.path.isdir(plot_dir):
             FileNotFoundError(f"This folder should have been created {plot_dir}")
@@ -96,7 +97,7 @@ class Processor(abc.ABC):
         if not os.path.isdir(output_folder):
             os.mkdir(output_folder)
 
-        self.plotter = RadialPlotter(self.lats, self.lons, output_folder)
+        self.plotter = bugtracker.plots.radial.RadialPlotter(self.lats, self.lons, output_folder)
 
     @abc.abstractmethod
     def load_specific_calib(self):
@@ -161,16 +162,36 @@ class IrisProcessor(Processor):
             raise ValueError(f"Invalid dopvol dimensions: {self.dopvol_clutter.shape}")
 
 
+    def plot_graph(self, prefix, plot_type, angle, slice_data, plot_dt):
+
+        label = f"{prefix}_{plot_type}_{angle}"
+        max_range = 150
+
+        self.plotter.set_data(slice_data, label, plot_dt, self.metadata, max_range)
+        self.plotter.save_plot(min_value=-10, max_value=40)
+
+
     def plot_iris(self, iris_data, label_prefix):
         """
         Plots a set of iris data
         """
 
-        print("Plotting:", label_prefix)
-
         if self.plotter is None:
             raise ValueError("Plotter has not been initialized!")
 
+        print("Plotting:", label_prefix)
+
+        print("Plotting convol")
+        for x in range(0, len(self.convol_angles)):
+            angle = self.convol_angles[x]
+            slice_data = iris_data.convol[x,:,:]
+            self.plot_graph(label_prefix, "convol", angle, slice_data, iris_data.datetime)
+
+        print("Plotting dopvol")
+        for x in range(0, len(self.dopvol_angles)):
+            angle = self.dopvol_angles[x]
+            slice_data = iris_data.dopvol[x,:,:]
+            self.plot_graph(label_prefix, "dopvol", angle, slice_data, iris_data.datetime)
 
 
 
@@ -207,7 +228,7 @@ class IrisProcessor(Processor):
         iris_data.fill_grids()
 
         # plot the unmodified files
-        self.plot_iris(iris_data, "raw")
+        #self.plot_iris(iris_data, "raw")
         
         # construct the PrecipFilter from iris_set
         convol_precip = PrecipFilter(self.metadata, self.grid_info, self.convol_angles)

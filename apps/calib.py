@@ -168,9 +168,9 @@ def run_calib(args, metadata, grid_info, calib_grid):
     calib_sets = iris_collection.time_range(time_start, data_mins)
 
     for data_set in calib_sets:
-        print(data_set.datetime)
+        print("Calib set:", data_set.datetime)
 
-    threshold = 0.8
+    threshold = config['clutter']['coverage_threshold']
 
     calib_controller.set_calib_data(calib_sets)
     calib_controller.create_masks(threshold)

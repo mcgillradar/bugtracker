@@ -152,6 +152,7 @@ class IrisController(Controller):
     def __init__(self, metadata, grid_info):
 
         super().__init__(metadata, grid_info)
+        self.config = bugtracker.config.load("./bugtracker.json")
         self.convol_clutter = ClutterFilter(metadata, grid_info)
         self.dopvol_clutter = ClutterFilter(metadata, grid_info)
 
@@ -184,7 +185,7 @@ class IrisController(Controller):
         iris_data = bugtracker.core.iris.IrisData(iris_set)
         iris_data.fill_grids()
 
-        dbz_threshold = 20.0
+        dbz_threshold = self.config['clutter']['dbz_threshold']
 
         dopvol_dims = self.dopvol_clutter.get_dims()
         convol_dims = self.convol_clutter.get_dims()
@@ -228,14 +229,25 @@ class IrisController(Controller):
         self.norm_dopvol = self.dopvol_instances / float(num_timeseries)
         self.norm_convol = self.convol_instances / float(num_timeseries)
 
+        bugtracker.core.utils.arr_info(self.dopvol_instances, "dopvol_instances")
+        bugtracker.core.utils.arr_info(self.convol_instances, "convol_instances")
+
+        bugtracker.core.utils.arr_info(self.norm_dopvol, "norm_dopvol")
+        bugtracker.core.utils.arr_info(self.norm_convol, "norm_convol")
+
         prev_shape_dopvol = self.dopvol_clutter.filter_3d.shape
         prev_shape_convol = self.convol_clutter.filter_3d.shape
 
-        self.dopvol_clutter.filter_3d = self.norm_dopvol > threshold
-        self.convol_clutter.filter_3d = self.norm_convol > threshold
+        print("Coverage threshold:", threshold)
+
+        self.dopvol_clutter.filter_3d = self.norm_dopvol >= threshold
+        self.convol_clutter.filter_3d = self.norm_convol >= threshold
 
         post_shape_dopvol = self.dopvol_clutter.filter_3d.shape
         post_shape_convol = self.convol_clutter.filter_3d.shape
+
+        bugtracker.core.utils.arr_info(self.dopvol_clutter.filter_3d, "dopvol_clutter")
+        bugtracker.core.utils.arr_info(self.convol_clutter.filter_3d, "convol_clutter")
 
         if prev_shape_dopvol != post_shape_dopvol:
             raise ValueError("Incompatible shapes: {prev_shape_dopvol} != {post_shape_dopvol}")
