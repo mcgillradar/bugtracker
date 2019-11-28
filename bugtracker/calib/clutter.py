@@ -32,8 +32,4 @@ class ClutterFilter(Filter):
     def __init__(self, metadata, grid_info):
         super().__init__(metadata, grid_info)
 
-    def test_method(self):
-        """
-        test_implementation
-        """
-        print("Implemented")
+

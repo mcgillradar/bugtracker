@@ -152,7 +152,7 @@ def run_calib(args, metadata, grid_info, calib_grid):
 
     config = bugtracker.config.load("./bugtracker.json")
 
-    calib_controller = bugtracker.calib.calib.IrisController(metadata, grid_info)
+    calib_controller = bugtracker.calib.calib.IrisController(args, metadata, grid_info)
     calib_controller.set_grids(calib_grid)
 
     time_start = datetime.datetime.strptime(args.timestamp, "%Y%m%d%H%M")

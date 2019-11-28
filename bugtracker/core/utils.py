@@ -48,28 +48,6 @@ class DateRange:
         self.end = end
 
 
-
-def maskgen(grid_info):
-    """
-    Generate an empty mask
-    """
-    dims = (grid_info.azims, grid_info.gates)
-    mask = np.full(dims, True, dtype=bool)
-    return mask
-
-
-
-def dbz_mask(metadata, grid_info):
-    """
-    Don't necessarily need elevation info for this section.
-    """
-    
-    dbz_mask = bugtracker.core.utils.maskgen(grid_info)
-
-    return dbz_mask
-
-
-
 def arr_info(np_array, label):
 
     print("*************************************")

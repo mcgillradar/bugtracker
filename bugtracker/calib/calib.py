@@ -76,15 +76,22 @@ class Data:
         # For now, not checking geometry and clutter masks.
 
 
-    def export(self, output_file):
+    def export(self, output_file, args):
         """
         Save netCDF4 output file
         """
+
+        timestamp = args.timestamp
+        calib_hours = args.data_hours
 
         azims = self.grid_info.azims
         gates = self.grid_info.gates
 
         dset = nc.Dataset(output_file, mode="w")
+
+        dset.setncattr_string("calib_start", timestamp)
+        dset.setncattr("calib_hours", calib_hours)
+
         dset.createDimension("azims", azims)
         dset.createDimension("gates", gates)
 
@@ -103,8 +110,9 @@ class Data:
 
 class Controller(abc.ABC):
 
-    def __init__(self, metadata, grid_info):
+    def __init__(self, args, metadata, grid_info):
 
+        self.args = args
         self.config = bugtracker.config.load("./bugtracker.json")
         self.metadata = metadata
         self.grid_info = grid_info
@@ -120,7 +128,7 @@ class Controller(abc.ABC):
         output_file = bugtracker.core.cache.calib_filepath(self.metadata, self.grid_info)
 
         self.data.check_data()
-        self.data.export(output_file)
+        self.data.export(output_file, self.args)
 
         if not os.path.isfile(output_file):
             raise FileNotFoundError(f"Error saving output file: {output_file}")
@@ -149,9 +157,9 @@ class Controller(abc.ABC):
 
 class IrisController(Controller):
 
-    def __init__(self, metadata, grid_info):
+    def __init__(self, args, metadata, grid_info):
 
-        super().__init__(metadata, grid_info)
+        super().__init__(args, metadata, grid_info)
         self.config = bugtracker.config.load("./bugtracker.json")
         self.convol_clutter = ClutterFilter(metadata, grid_info)
         self.dopvol_clutter = ClutterFilter(metadata, grid_info)
