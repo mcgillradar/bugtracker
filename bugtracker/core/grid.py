@@ -157,13 +157,13 @@ class GridInfo():
         return end_idx
 
 
-    def create_radar(self, scan_dt, dbz_array, metadata):
+    def create_radar(self, dbz_array, metadata):
         
         self.check_dbz_dims(dbz_array)
 
         # Create new 'radar' object from scratch, 
         
-        time_dict = self.get_time(scan_dt)
+        time_dict = self.get_time(metadata.scan_dt)
         _range = self.get_range()
         fields = dict()
         fields['dbz'] = self.get_dbz_field(dbz_array)

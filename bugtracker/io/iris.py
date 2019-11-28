@@ -29,9 +29,6 @@ import datetime
 import numpy as np
 import pyart
 
-import bugtracker.scan
-
-
 
 def get_scan_type(radar):
     scan_type = (radar.metadata['sigmet_task_name'].decode()).strip().lower()

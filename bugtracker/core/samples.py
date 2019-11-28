@@ -80,12 +80,11 @@ def grid_info():
 
 
 
-def iris_set():
+def iris_set(config):
     """
     Return sample IrisSet from some XAM radar set
     """
 
-    config = bugtracker.config.load("./bugtracker.json")
     radar_id = "xam"
     archive_dir = config['archive_dir']
     radar_dir = os.path.join(archive_dir, radar_id)
