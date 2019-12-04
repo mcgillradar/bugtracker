@@ -97,3 +97,22 @@ def iris_set(config):
         raise ValueError("Cannot find sample IrisSet")
 
     return sample_set
+
+
+def iris_set_wgj(config):
+    """
+    Return sample IrisSet from some XAM radar set
+    """
+
+    radar_id = "wgj"
+    archive_dir = config['archive_dir']
+    radar_dir = os.path.join(archive_dir, radar_id)
+    iris_collection = bugtracker.io.iris.IrisCollection(radar_dir, radar_id)
+
+    sample_datetime = datetime.datetime(2014, 4, 16, 2, 30, 20)
+    sample_set = iris_collection.closest_set(sample_datetime)
+
+    if sample_set is None:
+        raise ValueError("Cannot find sample IrisSet")
+
+    return sample_set
