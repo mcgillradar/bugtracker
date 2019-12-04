@@ -225,8 +225,11 @@ class IrisProcessor(Processor):
 
 
     def determine_zone_slope(self, iris_data, azim_zone, gate_zone):
-        
-        # We will only use CONVOL scans for determining slopes
+        """
+        We will only use CONVOL scans for determining slopes
+        The following property can be used to exclude clutter from slope.
+        self.convol_clutter
+        """
 
         azim_region = self.config['precip']['azim_region']
         gate_region = self.config['precip']['gate_region']
@@ -243,17 +246,40 @@ class IrisProcessor(Processor):
         for x in range(0, len(self.convol_angles)):
             angle = self.convol_angles[x]
             zone_data = iris_data.convol[x,min_azim:max_azim,min_gate:max_gate]
-            zone_flat = list(zone_data.flatten())
+            # Should be more OOP
+            zone_clutter = self.convol_clutter[x,min_azim:max_azim,min_gate:max_gate]
+            zone_clutter_bool = zone_clutter.astype(bool)
 
-            for dbz in zone_flat:
-                angle_list.append(angle)
-                dbz_list.append(dbz)
+            if zone_data.shape != zone_clutter.shape:
+                raise ValueError("Incompatible zone shapes.")
+
+            zone_flat = list(zone_data.flatten())
+            zone_clutter_flat = list(zone_clutter_bool.flatten())
+
+            num_cells = len(zone_flat)
+            num_clutter = len(zone_clutter_flat)
+
+            if num_cells != num_clutter:
+                raise ValueError("Incompatible list lengths.")
+
+            for y in range(0, num_cells):
+                if not zone_clutter_flat[y]:
+                    dbz = zone_flat[y]
+                    angle_list.append(angle)
+                    dbz_list.append(dbz)
 
         if len(angle_list) != len(dbz_list):
             raise ValueError("Zone slope error")
 
-        slope, intercept, r_value, p_value, std_err = stats.linregress(angle_list, dbz_list)
-        return slope
+        # If there is only data from one elevation angle, we cannot
+        # compute the slope.
+
+        angle_set = set(angle_list)
+        if len(angle_set) < 2:
+            return np.nan
+        else:
+            slope, intercept, r_value, p_value, std_err = stats.linregress(angle_list, dbz_list)
+            return slope
 
 
     def filter_precip(self, convol_precip, dopvol_precip, iris_data):
@@ -277,7 +303,7 @@ class IrisProcessor(Processor):
         for x in range(0, azim_zones):
             for y in range(0, gate_zones):
                 slope = self.determine_zone_slope(iris_data, x, y)
-                if slope > max_slope:
+                if not np.isnan(slope) and slope > max_slope:
                     min_azim = x * azim_region
                     max_azim = (x + 1) * azim_region
 
