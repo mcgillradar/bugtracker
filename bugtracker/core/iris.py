@@ -80,7 +80,7 @@ class IrisData:
         self.metadata = bugtracker.core.metadata.from_iris_set(iris_set)
         self.datetime = iris_set.datetime
         self.config = bugtracker.config.load('./bugtracker.json')
-        self.convol_scans = self.config["iris_convol_scans"]
+        self.convol_scans = self.config["iris_settings"]["convol_scans"]
         self.dopvol_scans = 3 
 
         self.grid = iris_grid()

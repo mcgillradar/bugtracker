@@ -106,6 +106,11 @@ class IrisSet:
         self.dopvol_1C = None
         self.dopvol_2 = None
 
+    def convol_elevs(self):
+        pass
+
+    def dopvol_elevs(self):
+        pass
 
     def get_elevs(self, scan_type):
 
@@ -120,7 +125,6 @@ class IrisSet:
             return [-0.5, -0.2, -0.5]
         else:
             raise ValueError(scan_type)
-
 
     def is_valid(self):
 
