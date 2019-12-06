@@ -80,7 +80,7 @@ def grid_info():
 
 
 
-def iris_set(config):
+def iris_set_xam(config):
     """
     Return sample IrisSet from some XAM radar set
     """

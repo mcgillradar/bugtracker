@@ -77,6 +77,8 @@ class IrisData:
         Extract numpy arrays for easy file manipulation
         """
 
+        self._iris_set = iris_set
+
         self.metadata = bugtracker.core.metadata.from_iris_set(iris_set)
         self.datetime = iris_set.datetime
         self.config = bugtracker.config.load('./bugtracker.json')
@@ -100,6 +102,9 @@ class IrisData:
         # Elevations go from lowest to highest, using convention (-90.0, 90.0)
         self.convol_elevs = iris_set.get_elevs("convol")
         self.dopvol_elevs = iris_set.get_elevs("dopvol")
+
+        self.velocity = None
+        self.spectrum_width = None
 
 
     def print_sizes(self):
@@ -229,3 +234,61 @@ class IrisData:
         label_2 = f"dopvol_long_elev_{dopvol_elev_2}"
         self.plot_level(dbz_dopvol_2, output_folder, label_2, max_range)
 
+
+    def merge_3d(self):
+        """
+        Merge dopvol and convol together
+        
+        """
+
+        return np.zeros((1,1,1), dtype=float)
+
+
+    def merge_dopvol_field(self, field_type):
+        """
+        First, we need to get DOPVOL_1A, DOPVOL1B
+        and DOPVOL_2 on the same grid.
+
+        Second step, is to check that fixed_angle for DOPVOL_1A
+        < DOPVOL_1B. If not, a basic assumption is violated and
+        an exception must be raised.
+        
+        The following code normalizes the Iris DOPVOL grids to
+        one uniform grid. I have noticed that the elevation angles
+        of the various DOPVOL scans can be quite variable, depending
+        on which Canadian radar is chosen. Therefore I have written
+        code that handles all possible cases.
+
+        Direct enumeration of cases:
+        1. DOPVOL_2 < DOPVOL_1A
+            i) Create [3,azims,gates] array
+            ii) Populate [DOPVOL_2, DOPVOL_1A, DOPVOL_1B]
+        2. DOPVOL_2 == DOPVOL_1A
+            i) Create [2,azims,gates] array 
+            ii) Merge DOPVOL_2 and DOPVOL_1A
+            iii) Populate [JOINT, DOPVOL_1B]
+        3. DOPVOL_1A < DOPVOL_2 < DOPVOL_1B
+            i) Create [3,azims,gates] array
+            ii) Populate [DOPVOL_1, DOPVOL_2, DOPVOL_1B]
+        4. DOPVOL_2 == DOPVOL_1B
+            raise IrisIOException
+        5. DOPVOL_2 > DOPVOL_1B
+            raise IrisIoException
+
+        Case 4 and 5 are unusual, and for the moment, I will
+        throw an IrisIOException
+
+        This list of cases should be exhaustive. If none of these
+        conditions are true, then there is either an error in the file
+        or an error in our understanding of the 
+        """
+
+        dims = (1,1,1)
+
+        return np.zeros(dims, dtype=float)
+
+
+    def fill_dopvol(self):
+
+        self.velocity = self.merge_dopvol_field("velocity")
+        self.spectrum_width = self.merge_dopvol_field("spectrum_width")

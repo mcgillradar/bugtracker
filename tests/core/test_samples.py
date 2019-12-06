@@ -49,11 +49,15 @@ def test_iris_set():
     """
 
     config = bugtracker.config.load("../apps/bugtracker.json")
-    iris_set = bugtracker.core.samples.iris_set(config)
-    
-    assert isinstance(iris_set.datetime, datetime.datetime)
-    assert os.path.isfile(iris_set.convol)
-    assert os.path.isfile(iris_set.dopvol_1A)
-    assert os.path.isfile(iris_set.dopvol_1B)
-    assert os.path.isfile(iris_set.dopvol_1C)
-    assert os.path.isfile(iris_set.dopvol_2)
+    iris_set_xam = bugtracker.core.samples.iris_set_xam(config)
+    iris_set_wgj = bugtracker.core.samples.iris_set_wgj(config)
+
+    test_sets = [iris_set_xam, iris_set_wgj]
+
+    for test_set in test_sets:
+        assert isinstance(test_set.datetime, datetime.datetime)
+        assert os.path.isfile(test_set.convol)
+        assert os.path.isfile(test_set.dopvol_1A)
+        assert os.path.isfile(test_set.dopvol_1B)
+        assert os.path.isfile(test_set.dopvol_1C)
+        assert os.path.isfile(test_set.dopvol_2)

@@ -322,9 +322,9 @@ class IrisProcessor(Processor):
 
         iris_data = bugtracker.core.iris.IrisData(iris_set)
         iris_data.fill_grids()
-
+        iris_data.fill_dopvol()
         # plot the unmodified files
-        self.plot_iris(iris_data, "raw")
+        #self.plot_iris(iris_data, "raw")
         
         # construct the PrecipFilter from iris_set
         convol_precip = PrecipFilter(self.metadata, self.grid_info, self.convol_angles)
@@ -339,8 +339,16 @@ class IrisProcessor(Processor):
         # modify the files based on filters
         self.impose_filter(iris_data, convol_joint, dopvol_joint)
 
+        dbz_3d = iris_data.merge_3d()
+
+        velocity_3d = iris_data.velocity
+        spectrum_width_3d = iris_data.spectrum_width
+
+        # Populate output
+        # Make plot based on output
+
         # plot modified files
-        self.plot_iris(iris_data, "filtered")
+        #self.plot_iris(iris_data, "filtered")
 
 
     def process_sets(self, iris_sets):
