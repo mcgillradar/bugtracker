@@ -71,6 +71,8 @@ class IrisOutput(BaseOutput):
         self.velocity = None
         self.spectrum_width = None
 
+        # TODO: This doesn't actually work without using
+        # a sample set. Circular!
         self.dbz_angles = self.get_dbz_angles()
         self.dop_angles = self.get_doppler_angles()
 

@@ -244,6 +244,17 @@ class IrisData:
         return np.zeros((1,1,1), dtype=float)
 
 
+    def merge_2d(self, gridA, gridB):
+
+        if gridA.shape != gridB.shape:
+            raise ValueError("Shapes of grids is not equal.")
+
+        # Merge 2d numpy masked arrays
+        raise NotImplementedError("Haven't merged")
+
+        return None
+
+
     def merge_dopvol_field(self, field_type):
         """
         First, we need to get DOPVOL_1A, DOPVOL1B
@@ -295,19 +306,26 @@ class IrisData:
         gates = self.grid.gates
         dims = (num_angles, azims, gates)
 
-        dopvol_field = np.zeros(dims, dtype=float)
+        dopvol_field = np.ma.zeros(dims, dtype=float)
 
-        if angle_1A < angle_2:
+        field_1A = self.pyart_dopvol_1A.fields[field_type]['data']
+        field_1B = self.pyart_dopvol_1B.fields[field_type]['data']
+        field_2 = self.pyart_dopvol_2.fields[field_type]['data']
+
+        if angle_1A > angle_2:
             # Case 1
-            pass
-        
+            dopvol_field[0,:,:] = field_2[:,:]
+            dopvol_field[1,:,:] = field_1A[:,:]
+            dopvol_field[2,:,:] = field_1B[:,:]
         elif angle_1A == angle_2:
             # Case 2
-            pass
-        
+            dopvol_field[0,:,:] = merge_2d(field_2, field_1A)
+            dopvol_field[1,:,:] = field_1B[:,:]
         elif angle_1A < angle_2 < angle_1B:
             # Case 3
-            pass
+            dopvol_field[0,:,:] = field_1A[:,:]
+            dopvol_field[1,:,:] = field_2[:,:]
+            dopvol_field[2,:,:] = field_1B[:,:]
         else:
             raise bugtracker.core.exceptions.IrisIOException("Unexpected case in Iris scan angles.")
         
@@ -315,7 +333,9 @@ class IrisData:
 
     def fill_dopvol(self):
 
-        self.pyart_dopvol_1A = pyart.io.read_sigmet
+        self.pyart_dopvol_1A = pyart.io.read_sigmet(self._iris_set.dopvol_1A)
+        self.pyart_dopvol_1B = pyart.io.read_sigmet(self._iris_set.dopvol_1B)
+        self.pyart_dopvol_2 = pyart.io.read_sigmet(self._iris_set.dopvol_2)
 
         self.dopvol_dbz = self.merge_dopvol_field("reflectivity")
         self.velocity = self.merge_dopvol_field("velocity")
