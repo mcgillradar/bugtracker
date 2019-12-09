@@ -277,11 +277,11 @@ class IrisData:
 
         Case 4 and 5 are unusual, and for the moment, I will
         throw an IrisIOException
-
-        This list of cases should be exhaustive. If none of these
-        conditions are true, then there is either an error in the file
-        or an error in our understanding of the 
         """
+
+        dopvol_levels = self._iris_set.get_elevs("dopvol")
+
+        
 
         dims = (1,1,1)
 

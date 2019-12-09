@@ -29,6 +29,7 @@ import datetime
 import numpy as np
 import pyart
 
+import bugtracker.config
 
 def get_scan_type(radar):
     scan_type = (radar.metadata['sigmet_task_name'].decode()).strip().lower()
@@ -68,6 +69,20 @@ def extract_dbz(filename):
     return dbz_field
 
 
+def extract_fixed_angle(filename, single=False):
+
+    if not os.path.isfile(filename):
+        raise FileNotFoundError(filename)
+
+    radar = pyart.io.read_sigmet(filename)
+    angles = radar.fixed_angle['data']
+
+    if single and len(angles) != 1:
+        raise ValueError("Should be exactly one angle")
+        return angles[0]
+    else:
+        return angles
+
 
 class IrisFile:
 
@@ -92,6 +107,8 @@ class IrisSet:
 
     def __init__(self, convol, radar_id):
 
+        self.config = bugtracker.config.load("./bugtracker.json")
+
         if convol.datetime is None:
             raise ValueError("IrisSet datetime cannot be null.")
 
@@ -106,11 +123,57 @@ class IrisSet:
         self.dopvol_1C = None
         self.dopvol_2 = None
 
+
+    def round_angle(self, angle):
+        """
+        Rounds angle, and uses convention of negative angles,
+        instead of wrapping around 0 to 360.
+        """
+
+        if angle >= 360.0:
+            angle -= 360.0
+
+        return round(angle,1)
+
+
     def convol_elevs(self):
-        pass
+        """
+        Convol elevs start from the highest, but we want
+        to take the N lowest.
+        """
+
+        num_convol_scans = self.config["iris_settings"]["convol_scans"]
+        convol_elevs = []
+        
+        fixed_angles = extract_fixed_angle(self.convol)
+        total_angles = len(fixed_angles)
+
+        for x in range(0, num_convol_scans):
+            idx = total_angles - (1 + x)
+            raw_angle = fixed_angles[idx]
+            angle = self.round_angle(raw_angle)
+            convol_elevs.append(angle)
+
+        return convol_elevs
+
 
     def dopvol_elevs(self):
-        pass
+        """
+        Dopvol elevs are DOPVOL_1A, DOPVOL_1B, DOPVOL_2
+        """
+
+        dopvol_elevs = []
+
+        angle_1A = extract_fixed_angle(self.dopvol1_a)
+        angle_1B = extract_fixed_angle(self.dopvol1_b)
+        angle_2 = extract_fixed_angle(self.dopvol_2)
+
+        dopvol_elevs.append(angle_1A)
+        dopvol_elevs.append(angle_1B)
+        dopvol_elevs.append(angle_2)
+
+        return dopvol_elevs
+
 
     def get_elevs(self, scan_type):
 
@@ -120,9 +183,9 @@ class IrisSet:
         scan_type = (scan_type.strip()).lower()
 
         if scan_type == 'convol':
-            return [-0.5, -0.3, -0.1, 0.1, 0.3]
+            return self.convol_elevs
         elif scan_type == 'dopvol':
-            return [-0.5, -0.2, -0.5]
+            return self.dopvol_elevs
         else:
             raise ValueError(scan_type)
 
