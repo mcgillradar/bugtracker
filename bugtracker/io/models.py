@@ -87,19 +87,28 @@ class IrisOutput(BaseOutput):
 
 
     def get_dbz_angles(self):
+        """
+        Take the join of all angles, unique only, order.
+        """
 
-        # TODO: Implement generically, not specifically
-        # for XAM
+        all_angles = self.dbz_angles + self.dop_angles
+        angle_set = set(all_angles)
+        angle_list = list(angle_set)
+        angle_list.sort()
 
-        return [-0.5, -0.3, -0.2, -0.1, 0.1, 0.3]
+        return angle_list
 
 
     def get_doppler_angles(self):
+        """
+        Take only unique doppler angles
+        """
 
-        # TODO: Implement generically, not specifically
-        # for XAM
+        doppler_set = set(self.dop_angles)
+        doppler_list = list(doppler_set)
+        doppler_list.sort()
 
-        return [-0.5, -0.2]
+        return doppler_list
 
 
     def validate():

@@ -28,7 +28,7 @@ import bugtracker.core.grid
 import bugtracker.config
 import bugtracker.plots.dbz
 import bugtracker.core.metadata
-
+import bugtracker.core.exceptions
 
 class IrisProcessor:
 
@@ -103,9 +103,9 @@ class IrisData:
         self.convol_elevs = iris_set.get_elevs("convol")
         self.dopvol_elevs = iris_set.get_elevs("dopvol")
 
+        self.dopvol_dbz = None
         self.velocity = None
         self.spectrum_width = None
-
 
     def print_sizes(self):
 
@@ -281,14 +281,42 @@ class IrisData:
 
         dopvol_levels = self._iris_set.get_elevs("dopvol")
 
+        if len(dopvol_levels) != 3:
+            raise ValueError("Should be exactly 3 DOPVOL levels")
+
+        angle_1A, angle_1B, angle_2 = dopvol_levels
+        dopvol_set = set(dopvol_levels)
+        num_angles = len(dopvol_set)
+
+        if angle_1B <= angle_1A:
+            raise bugtracker.core.exceptions.IrisIOException("Angle 1B cannot be lower than 1A")
+
+        azims = self.grid.azims
+        gates = self.grid.gates
+        dims = (num_angles, azims, gates)
+
+        dopvol_field = np.zeros(dims, dtype=float)
+
+        if angle_1A < angle_2:
+            # Case 1
+            pass
         
-
-        dims = (1,1,1)
-
-        return np.zeros(dims, dtype=float)
-
+        elif angle_1A == angle_2:
+            # Case 2
+            pass
+        
+        elif angle_1A < angle_2 < angle_1B:
+            # Case 3
+            pass
+        else:
+            raise bugtracker.core.exceptions.IrisIOException("Unexpected case in Iris scan angles.")
+        
+        return dopvol_field
 
     def fill_dopvol(self):
 
+        self.pyart_dopvol_1A = pyart.io.read_sigmet
+
+        self.dopvol_dbz = self.merge_dopvol_field("reflectivity")
         self.velocity = self.merge_dopvol_field("velocity")
         self.spectrum_width = self.merge_dopvol_field("spectrum_width")
