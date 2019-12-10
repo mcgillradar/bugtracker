@@ -30,6 +30,7 @@ import numpy as np
 import pyart
 
 import bugtracker.config
+import bugtracker.core.utils
 
 def get_scan_type(radar):
     scan_type = (radar.metadata['sigmet_task_name'].decode()).strip().lower()
@@ -122,6 +123,17 @@ class IrisSet:
         self.dopvol_1B = None
         self.dopvol_1C = None
         self.dopvol_2 = None
+
+
+    def display_stats(self):
+
+        scans = [self.convol, self.dopvol_1A, self.dopvol_1B,
+                 self.dopvol_1C, self.dopvol_2]
+        labels = ['convol', 'dopvol1A', 'dopvol1B', 'dopvol1C', 'dopvol2']
+        num_scans = len(scans)
+
+        for x in range(0, num_scans):
+            bugtracker.core.utils.iris_scan_stats(scans[x], labels[x])
 
 
     def round_angle(self, angle):

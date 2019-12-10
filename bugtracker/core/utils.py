@@ -22,6 +22,7 @@ a utility module. If this grows too big, split it up
 into multiple modules.
 """
 
+import os
 import sys
 import datetime
 
@@ -129,3 +130,32 @@ def check_memory(requested_bytes):
 
     if available < requested_bytes:
         raise MemoryError(f"Requested bytes {requested_bytes} greater than available: {available}")
+
+
+def iris_scan_stats(radar_file, label):
+
+    print("*******************************************")
+
+    if radar_file is None or not os.path.isfile(radar_file):
+        raise FileNotFoundError(radar_file)
+
+    print("Iris statistics for scan type:", label)
+    radar = pyart.io.read_sigmet(radar_file)
+
+    ngates = radar.ngates
+    nrays = radar.nrays
+    nsweeps = radar.nsweeps
+
+    print(f"ngates: {ngates}, nrays: {nrays}, nsweeps: {nsweeps}")
+
+    gate_ranges = radar.range['data']
+    num_gates = len(gate_ranges)
+    max_distance = gate_ranges[num_gates - 1] / 1000.0
+    print(f"Max distance: {max_distance} km")
+
+    field_keys = radar.fields.keys()
+
+    for key in field_keys:
+        field_dims = radar.fields[key]['data'].shape
+        print(f"Field: {key} - dims: {field_dims}")
+
