@@ -46,7 +46,7 @@ class IrisProcessor:
 
         # Now, filter out > 30 dBZ
 
-        filtered = np.ma.masked_where(maximum_vals > 30.0, maximum_vals)
+        filtered =n p.ma.masked_where(maximum_vals > 30.0, maximum_vals)
 
         return filtered
 
@@ -87,40 +87,31 @@ class IrisData:
 
         self.grid = iris_grid()
 
-        azims = self.grid.azims
-        gates = self.grid.gates
-
-        self.convol_raw = bugtracker.io.iris.extract_dbz(iris_set.convol)
-        self.dopvol_1A_raw = bugtracker.io.iris.extract_dbz(iris_set.dopvol_1A)
-        self.dopvol_1B_raw = bugtracker.io.iris.extract_dbz(iris_set.dopvol_1B)
-        self.dopvol_2_raw = bugtracker.io.iris.extract_dbz(iris_set.dopvol_2)
-
-        self.convol = np.ma.zeros((self.convol_scans, azims, gates), dtype=float)
-        self.dopvol = np.ma.zeros((self.dopvol_scans, azims, gates), dtype=float)
-
         # Somehow get azimuthal angle programmatically from scan info
         # Elevations go from lowest to highest, using convention (-90.0, 90.0)
         self.convol_elevs = iris_set.get_elevs("convol")
         self.dopvol_elevs = iris_set.get_elevs("dopvol")
 
-        self.dopvol_dbz = None
-        self.velocity = None
-        self.spectrum_width = None
+        azims = self.grid.azims
+        gates = self.grid.gates
 
-    def print_sizes(self):
+        convol_dims = (self.convol_scans, azims, gates)
+        dopvol_dims = (self.dopvol_scans, azims, gates)
 
-        print("CONVOL:", self.convol_raw.shape)
-        print("DOPVOL_1A:", self.dopvol_1A_raw.shape)
-        print("DOPVOL_1B:", self.dopvol_1B_raw.shape)
-        print("DOPVOL_2:", self.dopvol_2_raw.shape)
+        self.convol = np.ma.zeros(convol_dims, dtype=float)
 
-        print("convol 3D:", self.convol.shape)
-        print("dopvol 3D:", self.dopvol.shape)
+        self.dopvol = np.ma.zeros(dopvol_dims, dtype=float)
+        self.total_power = np.ma.zeros(dopvol_dims, dtype=float)
+        self.velocity = np.ma.zeros(dopvol_dims, dtype=float)
+        self.spectrum_width = np.ma.zeros(dopvol_dims, dtype=float)
 
 
-    def fill_grids(self):
+    def fill_convol(self):
+        """
+        Filling convol levels
+        """
 
-        # Fill CONVOL
+        convol_raw = bugtracker.io.iris.extract_dbz(self._iris_set.convol)
 
         convol_levels = []
         # TODO: Get from file
@@ -129,7 +120,7 @@ class IrisData:
         for x in range(0, self.convol_scans):
             start = (24 - 1 - x) * convol_azims
             end = (24 - x) * convol_azims
-            convol_array = self.convol_raw[start:end,:]
+            convol_array = convol_raw[start:end,:]
             convol_levels.append(convol_array)
 
         if len(convol_levels) != self.convol_scans:
@@ -142,42 +133,70 @@ class IrisData:
                     gate_idx = int(y) // 2
                     self.convol[z, x, y] = convol_levels[z][azim_idx, gate_idx]
 
-        print("*************************")
-        print("Convol scan type:", type(self.convol))
-        print("Dopvol scan type:", type(self.dopvol))
 
-        # Filling in DOPVOL_1A and DOPVOL_1B
+    def fill_dopvol_short(self, scan, np_array, field_key, idx):
 
-        # TODO: Don't hardcore these
         dopvol_short_azims = 720
         dopvol_short_range = 225
 
-        if (self.dopvol_1A_raw.shape[0] != dopvol_short_azims
-            or self.dopvol_1A_raw.shape[1] != dopvol_short_range):
-            raise ValueError("Shape error", self.dopvol_1A_raw.shape)
+        short_field = scan.fields[field_key]['data']
+        short_field_shape = short_field.shape
 
-        if (self.dopvol_1B_raw.shape[0] != dopvol_short_azims
-            or self.dopvol_1B_raw.shape[1] != dopvol_short_range):
-            raise ValueError("Shape error". self.dopvol_1B_raw.shape)
+        if (short_field_shape[0] != dopvol_short_azims
+            or short_field_shape[1] != dopvol_short_range):
+            raise ValueError("Shape error", short_field_shape)
 
-        self.dopvol[0,0:dopvol_short_azims,0:dopvol_short_range] = self.dopvol_1A_raw[:,:]
-        self.dopvol[1,0:dopvol_short_azims,0:dopvol_short_range] = self.dopvol_1B_raw[:,:]
+        np_array[idx,0:dopvol_short_azims,0:dopvol_short_range] = short_field[:,:]
+        np_array.mask[idx,:,dopvol_short_range:] = True
 
-        self.dopvol.mask[0,:,dopvol_short_range:] = True
-        self.dopvol.mask[1,:,dopvol_short_range:] = True
 
-        # Filling in DOPVOL_2 (long range)
+    def fill_dopvol_long(self, scan, np_array, field_key, idx):
 
-        dopvol_2_gates = self.dopvol_2_raw.shape[1]
+        long_field = scan.fields[field_key]['data']
+        long_field_shape = long_field.shape
+
+        dopvol_2_gates = long_field_shape[1]
         dopvol_long_range = dopvol_2_gates * 2
 
         for x in range(0, self.grid.azims):
             azim_idx = int(x) // 2
             for y in range(0, dopvol_long_range):
                 gate_idx = int(y) // 2
-                self.dopvol[2, x, y] = self.dopvol_2_raw[azim_idx, gate_idx]
+                np_array[idx, x, y] = long_field[azim_idx, gate_idx]
 
-        self.dopvol.mask[2,:,dopvol_long_range:] = True
+        np_array.mask[idx,:,dopvol_long_range:] = True
+
+
+    def fill_dopvol_field(self, scan, np_array, field_key, idx, scan_type):
+        
+        scan_type = scan_type.strip().lower()
+
+        if scan_type == "short":
+            self.fill_dopvol_short(scan, np_array, field_key, idx)
+        elif scan_type == "long"
+            self.fill_dopvol_long(scan, np_array, field_key, idx)
+
+
+    def fill_dopvol_file(self, iris_file, idx, scan_type):
+        
+        scan = pyart.io.read_sigmet(iris_file)
+
+        self.fill_dopvol_field(scan, self.dopvol, "reflectivity", idx, scan_type)
+        self.fill_dopvol_field(scan, self.total_power, "total_power", idx, scan_type)
+        self.fill_dopvol_field(scan, self.velocity, "velocity", idx, scan_type)
+        self.fill_dopvol_field(scan, self.spectrum_width, "spectrum_width", idx, scan_type)
+
+
+    def fill_grids(self):
+        """
+        Fill grids according to 720x512 regularization
+        0.5 deg x 0.5 km bins are the standard
+        """
+
+        self.fill_convol()
+        self.fill_dopvol_file(self._iris_set.dopvol_1A, 0, "short")
+        self.fill_dopvol_file(self._iris_set.dopvol_1B, 1, "short")
+        self.fill_dopvol_file(self._iris_set.dopvol_2, 2, "long")
 
 
     def plot_level(self, dbz_array, output_folder, label, max_range):
