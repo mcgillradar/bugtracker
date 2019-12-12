@@ -176,8 +176,8 @@ class IrisSet:
 
         dopvol_elevs = []
 
-        angle_1A = extract_fixed_angle(self.dopvol1_a)
-        angle_1B = extract_fixed_angle(self.dopvol1_b)
+        angle_1A = extract_fixed_angle(self.dopvol_1A)
+        angle_1B = extract_fixed_angle(self.dopvol_1B)
         angle_2 = extract_fixed_angle(self.dopvol_2)
 
         dopvol_elevs.append(angle_1A)

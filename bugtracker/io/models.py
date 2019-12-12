@@ -19,53 +19,44 @@ class BaseOutput(abc.ABC):
         self.dbz_3d = None
 
 
-    def write_metadata(self, handle):
+    def write_metadata(self, dset):
         """
-        Put in all of the important attributes.
+        Put in all of the important attributes and metadata
+        using the dset file handle.
         """
 
-        # For the record, I am very confused about these two different
-        # ways of serializing metadata in netCDF4. I used the first
-        # one below to set some global attributes for the calibration.
-
-        # What is the difference? Will need to run some tests
-
-
-        # Adding metadata
-        dset.latitude = metadata.lat
-        dset.longitude = metadata.lon
-        dset.radar_id = metadata.radar_id
-        dset.datetime = metadata.scan_dt.strftime("%Y%m%d%H%M")
-        dset.name = metadata.name
+        dset.latitude = self.metadata.lat
+        dset.longitude = self.metadata.lon
+        dset.radar_id = self.metadata.radar_id
+        dset.datetime = self.metadata.scan_dt.strftime("%Y%m%d%H%M")
+        dset.name = self.metadata.name
         dset.filetype = self.radar_filetype
 
 
     def write(self, filename):
 
-        dset = nc.open(filename, mode="w")
+        dset = nc.Dataset(filename, mode="w")
 
+        self.write_metadata(dset)
         # Create dbz_elevs, azims, gates as dimensions
 
         azims = self.grid_info.azims
         gates = self.grid_info.gates
+        dbz_elevs = self.dbz_elevs
+        num_dbz_elevs = len(dbz_elevs)
 
-
+        dset.createDimension("dbz_elevs", num_dbz_elevs)
         dset.createDimension("azims", azims)
         dset.createDimension("gates", gates)
 
-        nc_lat = dset.createVariable("lats", float, ('azims','gates'))
-        nc_lon = dset.createVariable("lons", float, ('azims', 'gates'))
-        nc_altitude = dset.createVariable("altitude", float, ('azims', 'gates'))
+        nc_dbz_elevs = dset.createVariable("dbz_elevs", float, ('dbz_elevs',))
+        nc_dbz_3d = dset.createVariable("dbz", float, ('dbz_elevs','azims','gates'))
 
-        nc_lat[:,:] = self.lats[:,:]
-        nc_lon[:,:] = self.lons[:,:]
-        nc_altitude[:,:] = self.altitude[:,:]
-
-        # For now, not saving masks
+        nc_dbz_elevs[:] = dbz_elevs[:]
+        nc_dbz_3d[:,:,:] = self.dbz_3d[:,:,:]
 
         dset.close()
 
-        nc.close()
 
     def validate(self):
 
@@ -104,12 +95,15 @@ class IrisOutput(BaseOutput):
 
         self.dbz_3d = np.zeros((6,720,512), dtype=float)
 
+        self.dbz_elevs = np.linspace(1, 6, num=6)
+        self.dop_elevs = iris_data.dopvol_elevs()
+
         self.velocity = iris_data.velocity
         self.spectrum_width = iris_data.spectrum_width
         self.total_power = iris_data.total_power
 
 
-    def validate():
+    def validate(self):
 
         super().validate()
 
@@ -125,7 +119,7 @@ class IrisOutput(BaseOutput):
             raise ValueError(f"Incompatible shapes {velocity_shape} != {spectrum_shape}")
 
 
-    def write(filename):
+    def write(self, filename):
         """
         Appends. File is created in super class.
 
@@ -139,11 +133,25 @@ class IrisOutput(BaseOutput):
 
         super().write(filename)
 
-        nc.open(filename, mode="a")
+        dset = nc.Dataset(filename, mode="a")
 
-        # fill in here
+        dop_elevs = self.dop_elevs
+        num_dop_elevs = len(dop_elevs)
+        dop_dims = ('dop_elevs', 'azims', 'gates')
 
-        nc.close()
+        dset.createDimension("dop_elevs", num_dop_elevs)
+
+        nc_dop_elevs = dset.createVariable("dop_elevs", float, ('dop_elevs',))
+        nc_power = dset.createVariable("total_power", float, dop_dims)
+        nc_velocity = dset.createVariable("velocity", float, dop_dims)
+        nc_spectrum = dset.createVariable("spectrum_width", float, dop_dims)
+
+        nc_dop_elevs[:] = dop_elevs[:]
+        nc_power[:,:,:] = self.total_power[:,:,:]
+        nc_velocity[:,:,:] = self.velocity[:,:,:]
+        nc_spectrum[:,:,:] = self.spectrum_width[:,:,:]
+
+        dset.close()
 
 
 class OdimOutput(BaseOutput):

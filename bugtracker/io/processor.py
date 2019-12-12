@@ -317,14 +317,22 @@ class IrisProcessor(Processor):
         print("Total time for precip filter:", t1 - t0)
 
 
-    def get_output_file(self):
-        pass
+    def output_filename(self, scan_dt):
+        
+        output_folder = self.config['netcdf_dir']
+
+        if not os.path.isdir(output_folder):
+            raise FileNotFoundError(output_folder)
+
+        pattern = "dbz_%Y%m%d%H%M.nc"
+        output_filename = scan_dt.strftime(pattern)
+
+        return os.path.join(output_folder, output_filename)
 
     def process_set(self, iris_set):
 
         iris_data = bugtracker.core.iris.IrisData(iris_set)
         iris_data.fill_grids()
-        iris_data.fill_dopvol()
         # plot the unmodified files
         #self.plot_iris(iris_data, "raw")
         
@@ -341,9 +349,11 @@ class IrisProcessor(Processor):
         # modify the files based on filters
         self.impose_filter(iris_data, convol_joint, dopvol_joint)
 
+        nc_filename = self.output_filename(iris_data.datetime)
+
         iris_output = bugtracker.io.models.IrisOutput(self.metadata, self.grid_info)
         iris_output.populate(iris_data)
-        iris_output.verify()
+        iris_output.validate()
         iris_output.write(nc_filename)
 
 

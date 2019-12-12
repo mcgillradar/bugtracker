@@ -30,34 +30,6 @@ import bugtracker.plots.dbz
 import bugtracker.core.metadata
 import bugtracker.core.exceptions
 
-class IrisProcessor:
-
-    def __init__(self, iris_data, calib_data, output_folder):
-
-        self.iris_data = iris_data
-        self.output_folder = output_folder
-        self.calib_data = calib_data
-
-
-    def execute(self):
-
-        maximum_vals = self.iris_data.dopvol.max(axis=0)
-        print("OUTPUT SHAPE:", maximum_vals.shape)
-
-        # Now, filter out > 30 dBZ
-
-        filtered =n p.ma.masked_where(maximum_vals > 30.0, maximum_vals)
-
-        return filtered
-
-
-    def plot(self, bug_dbz, max_range):
-
-        label = "final_dbz"
-        bugtracker.plots.dbz.plot_dbz(bug_dbz, self.iris_data.datetime,
-                                      self.output_folder, label, max_range, self.iris_data.metadata)
-
-
 
 def iris_grid():
 
@@ -100,7 +72,7 @@ class IrisData:
 
         self.convol = np.ma.zeros(convol_dims, dtype=float)
         self.dopvol = np.ma.zeros(dopvol_dims, dtype=float)
-        
+
         self.total_power = np.ma.zeros(dopvol_dims, dtype=float)
         self.velocity = np.ma.zeros(dopvol_dims, dtype=float)
         self.spectrum_width = np.ma.zeros(dopvol_dims, dtype=float)
@@ -173,8 +145,10 @@ class IrisData:
 
         if scan_type == "short":
             self.fill_dopvol_short(scan, np_array, field_key, idx)
-        elif scan_type == "long"
+        elif scan_type == "long":
             self.fill_dopvol_long(scan, np_array, field_key, idx)
+        else:
+            raise ValueError(f"Invalid scan_type: {scan_type}")
 
 
     def fill_dopvol_file(self, iris_file, idx, scan_type):
@@ -350,12 +324,3 @@ class IrisData:
         
         return dopvol_field
 
-    def fill_dopvol(self):
-
-        self.pyart_dopvol_1A = pyart.io.read_sigmet(self._iris_set.dopvol_1A)
-        self.pyart_dopvol_1B = pyart.io.read_sigmet(self._iris_set.dopvol_1B)
-        self.pyart_dopvol_2 = pyart.io.read_sigmet(self._iris_set.dopvol_2)
-
-        self.dopvol_dbz = self.merge_dopvol_field("reflectivity")
-        self.velocity = self.merge_dopvol_field("velocity")
-        self.spectrum_width = self.merge_dopvol_field("spectrum_width")
