@@ -78,11 +78,22 @@ def extract_fixed_angle(filename, single=False):
     radar = pyart.io.read_sigmet(filename)
     angles = radar.fixed_angle['data']
 
-    if single and len(angles) != 1:
-        raise ValueError("Should be exactly one angle")
+    if single:
         return angles[0]
     else:
         return angles
+
+
+def round_angle(angle):
+    """
+    Rounds angle, and uses convention of negative angles,
+    instead of wrapping around 0 to 360.
+    """
+
+    if angle >= 180.0:
+        angle -= 360.0
+
+    return round(angle,1)
 
 
 class IrisFile:
@@ -136,18 +147,6 @@ class IrisSet:
             bugtracker.core.utils.iris_scan_stats(scans[x], labels[x])
 
 
-    def round_angle(self, angle):
-        """
-        Rounds angle, and uses convention of negative angles,
-        instead of wrapping around 0 to 360.
-        """
-
-        if angle >= 360.0:
-            angle -= 360.0
-
-        return round(angle,1)
-
-
     def convol_elevs(self):
         """
         Convol elevs start from the highest, but we want
@@ -163,7 +162,7 @@ class IrisSet:
         for x in range(0, num_convol_scans):
             idx = total_angles - (1 + x)
             raw_angle = fixed_angles[idx]
-            angle = self.round_angle(raw_angle)
+            angle = round_angle(raw_angle)
             convol_elevs.append(angle)
 
         return convol_elevs
@@ -176,13 +175,15 @@ class IrisSet:
 
         dopvol_elevs = []
 
-        angle_1A = extract_fixed_angle(self.dopvol_1A)
-        angle_1B = extract_fixed_angle(self.dopvol_1B)
-        angle_2 = extract_fixed_angle(self.dopvol_2)
+        angle_1A = extract_fixed_angle(self.dopvol_1A, single=True)
+        angle_1B = extract_fixed_angle(self.dopvol_1B, single=True)
+        angle_2 = extract_fixed_angle(self.dopvol_2, single=True)
 
-        dopvol_elevs.append(angle_1A)
-        dopvol_elevs.append(angle_1B)
-        dopvol_elevs.append(angle_2)
+        dopvol_elevs.append(round_angle(angle_1A))
+        dopvol_elevs.append(round_angle(angle_1B))
+        dopvol_elevs.append(round_angle(angle_2))
+
+        print("dopvol_elevs:", dopvol_elevs)
 
         return dopvol_elevs
 

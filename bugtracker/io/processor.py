@@ -351,6 +351,8 @@ class IrisProcessor(Processor):
 
         nc_filename = self.output_filename(iris_data.datetime)
 
+        iris_data.merge_dbz()
+
         iris_output = bugtracker.io.models.IrisOutput(self.metadata, self.grid_info)
         iris_output.populate(iris_data)
         iris_output.validate()

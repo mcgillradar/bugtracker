@@ -93,9 +93,8 @@ class IrisOutput(BaseOutput):
 
     def populate(self, iris_data):
 
-        self.dbz_3d = np.zeros((6,720,512), dtype=float)
-
-        self.dbz_elevs = np.linspace(1, 6, num=6)
+        self.dbz_3d = iris_data.dbz_merged
+        self.dbz_elevs = iris_data.dbz_elevs
         self.dop_elevs = iris_data.dopvol_elevs()
 
         self.velocity = iris_data.velocity

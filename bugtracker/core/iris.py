@@ -228,24 +228,14 @@ class IrisData:
         self.plot_level(dbz_dopvol_2, output_folder, label_2, max_range)
 
 
-    def merge_3d(self):
+    def merge_dbz(self):
         """
         Merge dopvol and convol together
         
         """
 
-        return np.zeros((1,1,1), dtype=float)
-
-
-    def merge_2d(self, gridA, gridB):
-
-        if gridA.shape != gridB.shape:
-            raise ValueError("Shapes of grids is not equal.")
-
-        # Merge 2d numpy masked arrays
-        raise NotImplementedError("Haven't merged")
-
-        return None
+        self.dbz_merged = np.zeros((6, 720, 512), dtype=float)
+        self.dbz_elevs = np.linspace(1, 6, num=6)
 
 
     def merge_dopvol_field(self, field_type):
