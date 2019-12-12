@@ -99,8 +99,8 @@ class IrisData:
         dopvol_dims = (self.dopvol_scans, azims, gates)
 
         self.convol = np.ma.zeros(convol_dims, dtype=float)
-
         self.dopvol = np.ma.zeros(dopvol_dims, dtype=float)
+        
         self.total_power = np.ma.zeros(dopvol_dims, dtype=float)
         self.velocity = np.ma.zeros(dopvol_dims, dtype=float)
         self.spectrum_width = np.ma.zeros(dopvol_dims, dtype=float)

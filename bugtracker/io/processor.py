@@ -317,6 +317,8 @@ class IrisProcessor(Processor):
         print("Total time for precip filter:", t1 - t0)
 
 
+    def get_output_file(self):
+        pass
 
     def process_set(self, iris_set):
 
@@ -339,16 +341,10 @@ class IrisProcessor(Processor):
         # modify the files based on filters
         self.impose_filter(iris_data, convol_joint, dopvol_joint)
 
-        dbz_3d = iris_data.merge_3d()
-
-        velocity_3d = iris_data.velocity
-        spectrum_width_3d = iris_data.spectrum_width
-
-        # Populate output
-        # Make plot based on output
-
-        # plot modified files
-        #self.plot_iris(iris_data, "filtered")
+        iris_output = bugtracker.io.models.IrisOutput(self.metadata, self.grid_info)
+        iris_output.populate(iris_data)
+        iris_output.verify()
+        iris_output.write(nc_filename)
 
 
     def process_sets(self, iris_sets):

@@ -16,7 +16,7 @@ class BaseOutput(abc.ABC):
         self.grid_info = grid_info
         self.radar_filetype = radar_filetype
 
-        self.dbz_3d = np.zeros((1,1,1), dtype=float)
+        self.dbz_3d = None
 
 
     def write_metadata(self, handle):
@@ -30,8 +30,6 @@ class BaseOutput(abc.ABC):
 
         # What is the difference? Will need to run some tests
 
-        dset.setncattr_string("calib_start", timestamp)
-        dset.setncattr("calib_hours", calib_hours)
 
         # Adding metadata
         dset.latitude = metadata.lat
@@ -39,15 +37,33 @@ class BaseOutput(abc.ABC):
         dset.radar_id = metadata.radar_id
         dset.datetime = metadata.scan_dt.strftime("%Y%m%d%H%M")
         dset.name = metadata.name
-
-        # Specific metadata for radar_filetype
+        dset.filetype = self.radar_filetype
 
 
     def write(self, filename):
 
         dset = nc.open(filename, mode="w")
 
-        # fill in here
+        # Create dbz_elevs, azims, gates as dimensions
+
+        azims = self.grid_info.azims
+        gates = self.grid_info.gates
+
+
+        dset.createDimension("azims", azims)
+        dset.createDimension("gates", gates)
+
+        nc_lat = dset.createVariable("lats", float, ('azims','gates'))
+        nc_lon = dset.createVariable("lons", float, ('azims', 'gates'))
+        nc_altitude = dset.createVariable("altitude", float, ('azims', 'gates'))
+
+        nc_lat[:,:] = self.lats[:,:]
+        nc_lon[:,:] = self.lons[:,:]
+        nc_altitude[:,:] = self.altitude[:,:]
+
+        # For now, not saving masks
+
+        dset.close()
 
         nc.close()
 
@@ -57,6 +73,17 @@ class BaseOutput(abc.ABC):
             raise ValueError("Main dbz array cannot be null")
 
         # check dimensions
+        azims = self.grid_info.azims
+        gates = self.grid_info.gates
+
+        dbz_azims = self.dbz_3d.shape[1]
+        dbz_gates = self.dbz_3d.shape[2]
+
+        if dbz_azims != azims:
+            raise ValueError(f"Incompatible azims: {dbz_azims} != {azims}")
+
+        if dbz_gates != gates:
+            raise ValueError(f"Incompatible gates: {dbz_gates} != {gates}")
 
 
 class IrisOutput(BaseOutput):
@@ -70,59 +97,35 @@ class IrisOutput(BaseOutput):
 
         self.velocity = None
         self.spectrum_width = None
-
-        # TODO: This doesn't actually work without using
-        # a sample set. Circular!
-        self.dbz_angles = self.get_dbz_angles()
-        self.dop_angles = self.get_doppler_angles()
+        self.total_power = None
 
 
-    def set_velocity(self, velocity_3d):
+    def populate(self, iris_data):
 
-        self.velocity = velocity_3d
+        self.dbz_3d = np.zeros((6,720,512), dtype=float)
 
-
-
-    def set_spectrum_width(self, spectrum_width_3d):
-
-        self.spectrum_width = spectrum_width_3d
-
-
-    def get_dbz_angles(self):
-        """
-        Take the join of all angles, unique only, order.
-        """
-
-        all_angles = self.dbz_angles + self.dop_angles
-        angle_set = set(all_angles)
-        angle_list = list(angle_set)
-        angle_list.sort()
-
-        return angle_list
-
-
-    def get_doppler_angles(self):
-        """
-        Take only unique doppler angles
-        """
-
-        doppler_set = set(self.dop_angles)
-        doppler_list = list(doppler_set)
-        doppler_list.sort()
-
-        return doppler_list
+        self.velocity = iris_data.velocity
+        self.spectrum_width = iris_data.spectrum_width
+        self.total_power = iris_data.total_power
 
 
     def validate():
 
         super().validate()
 
-        valid = True
-
         # check dimensions also
+        velocity_shape = self.velocity.shape
+        spectrum_shape = self.spectrum_width.shape
+        power_shape = self.total_power.shape
+
+        if velocity_shape != spectrum_shape:
+            raise ValueError(f"Incompatible shapes {velocity_shape} != {spectrum_shape}")
+
+        if velocity_shape != power_shape:
+            raise ValueError(f"Incompatible shapes {velocity_shape} != {spectrum_shape}")
 
 
-    def write():
+    def write(filename):
         """
         Appends. File is created in super class.
 
@@ -134,7 +137,7 @@ class IrisOutput(BaseOutput):
 
         self.validate()
 
-        super().write()
+        super().write(filename)
 
         nc.open(filename, mode="a")
 
