@@ -95,7 +95,7 @@ class IrisOutput(BaseOutput):
 
         self.dbz_3d = iris_data.dbz_merged
         self.dbz_elevs = iris_data.dbz_elevs
-        self.dop_elevs = iris_data.dopvol_elevs()
+        self.dop_elevs = iris_data.dopvol_elevs
 
         self.velocity = iris_data.velocity
         self.spectrum_width = iris_data.spectrum_width

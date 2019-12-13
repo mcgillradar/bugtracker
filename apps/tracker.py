@@ -103,10 +103,12 @@ def main():
     else:
         time_start = datetime.datetime.strptime(args.start, "%Y%m%d%H%M")
         data_mins = args.data_hours * 60
+        iris_dir = os.path.join(config['archive_dir'], args.station)
         iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
         iris_set_list = iris_collection.time_range(time_start, data_mins)
 
-    metadata = bugtracker.core.metadata.from_iris_set(closest_set)
+    first_set = iris_set_list[0]
+    metadata = bugtracker.core.metadata.from_iris_set(first_set)
     grid_info = bugtracker.core.iris.iris_grid()
     print("metadata:", metadata)
     print("grid_info:", grid_info)

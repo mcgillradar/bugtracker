@@ -234,6 +234,9 @@ class IrisData:
         
         """
 
+        print("Convol elevs:", self.convol_elevs)
+        print("Dopvol elevs:", self.dopvol_elevs)
+
         self.dbz_merged = np.zeros((6, 720, 512), dtype=float)
         self.dbz_elevs = np.linspace(1, 6, num=6)
 

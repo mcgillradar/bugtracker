@@ -196,9 +196,9 @@ class IrisSet:
         scan_type = (scan_type.strip()).lower()
 
         if scan_type == 'convol':
-            return self.convol_elevs
+            return self.convol_elevs()
         elif scan_type == 'dopvol':
-            return self.dopvol_elevs
+            return self.dopvol_elevs()
         else:
             raise ValueError(scan_type)
 
