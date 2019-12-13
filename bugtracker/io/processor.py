@@ -358,8 +358,23 @@ class IrisProcessor(Processor):
         iris_output.validate()
         iris_output.write(nc_filename)
 
+        #self.dbz_merged
+        #self.dbz_elevs
+        max_range = 150.0
+        num_elevs = len(iris_data.dbz_elevs)
+        
+        for x in range(0,num_elevs):
+            elev = iris_data.dbz_elevs[x]
+            print("Plotting: {elev}")
+            data = iris_data.dbz_merged[x,:,:]
+            label = f"angle_{elev}_"
+            self.plotter.set_data(data, label, iris_data.datetime, self.metadata, max_range)
+            self.plotter.save_plot(min_value=-15.0, max_value=40.0)
+
 
     def process_sets(self, iris_sets):
+
+        self.init_plotter()
 
         for iris_set in iris_sets:
             self.process_set(iris_set)
