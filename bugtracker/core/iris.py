@@ -228,17 +228,104 @@ class IrisData:
         self.plot_level(dbz_dopvol_2, output_folder, label_2, max_range)
 
 
+    def check_grids(self, c_shape, d_shape):
+        """
+        Checking compatibility of CONVOL and DOPVOL grids
+        """
+
+        if c_shape[1] != self.grid.azims:
+            raise ValueError("Inconsistent azims")
+
+        if c_shape[2] != self.grid.gates:
+            raise ValueError("Inconsistent gates")
+
+        if len(c_shape) != 3 or len(d_shape) != 3:
+            raise ValueError("Grids have incorrect dimensions.")
+
+        if c_shape[1] != d_shape[1] or c_shape[2] != d_shape[2]:
+            raise ValueError("Incompatible convol/dopvol dims.")
+
+
+    def level_indices(self, unique_levels, all_elevs):
+
+        idx_dict = dict()
+
+        num_total_levels = len(all_elevs)
+
+        for x in range(0, num_total_levels):
+            elev = all_elevs[x]
+            if elev not in idx_dict:
+                idx_dict[elev] = [x]
+            else:
+                idx_dict[elev].append(x)
+
+        return idx_dict
+
+
+    def merge_subarray(self, all_dbz, idx_list):
+
+        sub_array_dims = (len(idx_list), self.grid.azims, self.grid.gates)
+        sub_array = np.ma.zeros(sub_array_dims, dtype=float)
+
+        for x in range(0, len(idx_list)):
+            idx = idx_list[x]
+            sub_array[x,:,:] = all_dbz[idx,:,:]
+
+        return np.average(sub_array, axis=0)
+
+
+    def combine_all(self, all_dbz, level_indices, unique_levels):
+
+        num_unique = len(unique_levels)
+        dbz_dims = (num_unique, self.grid.azims, self.grid.gates)
+        dbz_merged = np.ma.zeros(dbz_dims, dtype=float)
+
+        for x in range(0, num_unique):
+            unique_level = unique_levels[x]
+            level_idx_list = level_indices[unique_level]
+            if len(level_idx_list) == 0:
+                raise ValueError("Empty index")
+            elif len(level_idx_list) == 1:
+                current_idx = level_idx_list[0]
+                dbz_merged[x,:,:] = all_dbz[current_idx,:,:]
+            else:
+                merged_level = self.merge_subarray(all_dbz, level_idx_list)
+                dbz_merged[x,:,:] = merged_level[:,:]
+
+        return dbz_merged
+
+
     def merge_dbz(self):
         """
         Merge dopvol and convol together
-        
         """
 
-        print("Convol elevs:", self.convol_elevs)
-        print("Dopvol elevs:", self.dopvol_elevs)
+        c_shape = self.convol.shape
+        d_shape = self.dopvol.shape
 
-        self.dbz_merged = np.zeros((6, 720, 512), dtype=float)
-        self.dbz_elevs = np.linspace(1, 6, num=6)
+        self.check_grids(c_shape, d_shape)
+
+        convol_levels = c_shape[0]
+        dopvol_levels = d_shape[0]
+        all_levels = convol_levels + dopvol_levels
+        all_elevs = self.convol_elevs + self.dopvol_elevs
+        all_dims = (all_levels, self.grid.azims, self.grid.gates)
+
+        # Combining DOPVOL and CONVOL into one big array
+        all_dbz = np.ma.zeros(all_dims, dtype=float)
+        all_dbz[0:convol_levels,:,:] = self.convol[:,:,:]
+        all_dbz[convol_levels:,:,:] = self.dopvol[:,:,:]
+
+        unique_levels = list(set(all_elevs))
+        unique_levels.sort()
+
+        level_indices = self.level_indices(unique_levels, all_elevs)
+        
+        self.dbz_merged = self.combine_all(all_dbz, level_indices, unique_levels)
+        self.dbz_elevs = unique_levels
+
+        print(type(self.dbz_merged))
+        print(self.dbz_merged)
 
 
     def merge_dopvol_field(self, field_type):
