@@ -363,11 +363,13 @@ class IrisProcessor(Processor):
         max_range = 150.0
         num_elevs = len(iris_data.dbz_elevs)
         
+        print("angles:", iris_data.dbz_elevs)
+
         for x in range(0,num_elevs):
             elev = iris_data.dbz_elevs[x]
-            print("Plotting: {elev}")
+            print(f"Plotting: {elev:.1f}")
             data = iris_data.dbz_merged[x,:,:]
-            label = f"angle_{elev}_"
+            label = f"angle_{elev:.1f}"
             self.plotter.set_data(data, label, iris_data.datetime, self.metadata, max_range)
             self.plotter.save_plot(min_value=-15.0, max_value=40.0)
 
