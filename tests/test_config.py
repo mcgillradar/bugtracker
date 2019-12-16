@@ -14,16 +14,6 @@ def test_check_exists():
     assert os.path.isfile(config_path)
 
 
-def test_missing_file():
-    """
-    Verify FileNotFoundError
-    """
-
-    missing_config_path = "../nonexistant/relative/file/path/"
-    with pytest.raises(FileNotFoundError):
-        config = bugtracker.config.load(missing_config_path)
-
-
 def test_fields():
     """
     Check all fields exist.
@@ -38,13 +28,12 @@ def test_fields():
         assert folder in config
         assert os.path.isdir(config[folder])
 
-    keys = ["iris_convol_scans", "clutter", "precip"]
-
-    for key in keys:
-        assert key in config
-
+    iris_keys = ["convol_scans"]
     clutter_keys = ["dbz_threshold", "coverage_threshold"]
     precip_keys = ["azim_region", "gate_region", "max_dbz_per_degree"]
+
+    for key in iris_keys:
+        assert key in config["iris_settings"]
 
     for key in clutter_keys:
         assert key in config["clutter"]
