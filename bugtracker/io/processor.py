@@ -329,6 +329,34 @@ class IrisProcessor(Processor):
 
         return os.path.join(output_folder, output_filename)
 
+
+    def plot_levels(self, iris_data, filtered=True):
+        """
+        Plot every level of the dbz output
+        """
+
+        max_range = 150.0
+        num_elevs = len(iris_data.dbz_elevs)
+        print("angles:", iris_data.dbz_elevs)
+
+        prefix = None
+        dbz_field = None
+        if filtered:
+            prefix = "filtered"
+            dbz_field = iris_data.dbz_filtered
+        else:
+            prefix = "unfiltered"
+            dbz_field = iris_data.dbz_unfiltered
+
+        for x in range(0,num_elevs):
+            elev = iris_data.dbz_elevs[x]
+            data = dbz_field[x,:,:]
+            label = f"{prefix}_angle_{elev:.1f}"
+            print(f"Plotting: {label}")
+            self.plotter.set_data(data, label, iris_data.datetime, self.metadata, max_range)
+            self.plotter.save_plot(min_value=-15.0, max_value=40.0)
+
+
     def process_set(self, iris_set):
 
         iris_data = bugtracker.core.iris.IrisData(iris_set)
@@ -346,32 +374,22 @@ class IrisProcessor(Processor):
         convol_joint = np.logical_or(self.convol_clutter.astype(bool), convol_precip.filter_3d)
         dopvol_joint = np.logical_or(self.dopvol_clutter.astype(bool), dopvol_precip.filter_3d)
 
+        iris_data.dbz_unfiltered = iris_data.merge_dbz()
+
         # modify the files based on filters
         self.impose_filter(iris_data, convol_joint, dopvol_joint)
 
         nc_filename = self.output_filename(iris_data.datetime)
 
-        iris_data.merge_dbz()
+        iris_data.dbz_filtered = iris_data.merge_dbz()
 
         iris_output = bugtracker.io.models.IrisOutput(self.metadata, self.grid_info)
         iris_output.populate(iris_data)
         iris_output.validate()
         iris_output.write(nc_filename)
 
-        #self.dbz_merged
-        #self.dbz_elevs
-        max_range = 150.0
-        num_elevs = len(iris_data.dbz_elevs)
-        
-        print("angles:", iris_data.dbz_elevs)
-
-        for x in range(0,num_elevs):
-            elev = iris_data.dbz_elevs[x]
-            print(f"Plotting: {elev:.1f}")
-            data = iris_data.dbz_merged[x,:,:]
-            label = f"angle_{elev:.1f}"
-            self.plotter.set_data(data, label, iris_data.datetime, self.metadata, max_range)
-            self.plotter.save_plot(min_value=-15.0, max_value=40.0)
+        self.plot_levels(iris_data, filtered=False)
+        self.plot_levels(iris_data, filtered=True)
 
 
     def process_sets(self, iris_sets):

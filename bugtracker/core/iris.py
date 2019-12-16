@@ -321,11 +321,10 @@ class IrisData:
 
         level_indices = self.level_indices(unique_levels, all_elevs)
         
-        self.dbz_merged = self.combine_all(all_dbz, level_indices, unique_levels)
+        dbz_merged = self.combine_all(all_dbz, level_indices, unique_levels)
         self.dbz_elevs = unique_levels
 
-        print(type(self.dbz_merged))
-        print(self.dbz_merged)
+        return dbz_merged
 
 
     def merge_dopvol_field(self, field_type):

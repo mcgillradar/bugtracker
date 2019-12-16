@@ -16,8 +16,6 @@ class BaseOutput(abc.ABC):
         self.grid_info = grid_info
         self.radar_filetype = radar_filetype
 
-        self.dbz_3d = None
-
 
     def write_metadata(self, dset):
         """
@@ -50,32 +48,39 @@ class BaseOutput(abc.ABC):
         dset.createDimension("gates", gates)
 
         nc_dbz_elevs = dset.createVariable("dbz_elevs", float, ('dbz_elevs',))
-        nc_dbz_3d = dset.createVariable("dbz", float, ('dbz_elevs','azims','gates'))
+        nc_dbz_filtered = dset.createVariable("dbz_filtered", float, ('dbz_elevs','azims','gates'))
+        nc_dbz_unfiltered = dset.createVariable("dbz_unfiltered", float, ('dbz_elevs','azims','gates'))
 
         nc_dbz_elevs[:] = dbz_elevs[:]
-        nc_dbz_3d[:,:,:] = self.dbz_3d[:,:,:]
+        nc_dbz_filtered[:,:,:] = self.dbz_filtered[:,:,:]
+        nc_dbz_unfiltered[:,:,:] = self.dbz_unfiltered[:,:,:]
 
         dset.close()
 
 
     def validate(self):
 
-        if self.dbz_3d is None:
-            raise ValueError("Main dbz array cannot be null")
+        if self.dbz_filtered is None:
+            raise ValueError("dbz_filtered array cannot be null.")
+
+        if self.dbz_unfiltered is None:
+            raise ValueError("dbz_unfiltered array cannot be null.")
+
+        if self.dbz_filtered.shape != self.dbz_unfiltered.shape:
+            raise ValueError("dbz grids must have the same dimension.")
 
         # check dimensions
         azims = self.grid_info.azims
         gates = self.grid_info.gates
 
-        dbz_azims = self.dbz_3d.shape[1]
-        dbz_gates = self.dbz_3d.shape[2]
+        dbz_azims = self.dbz_filtered.shape[1]
+        dbz_gates = self.dbz_filtered.shape[2]
 
         if dbz_azims != azims:
             raise ValueError(f"Incompatible azims: {dbz_azims} != {azims}")
 
         if dbz_gates != gates:
             raise ValueError(f"Incompatible gates: {dbz_gates} != {gates}")
-
 
 
 class IrisOutput(BaseOutput):
@@ -94,7 +99,8 @@ class IrisOutput(BaseOutput):
 
     def populate(self, iris_data):
 
-        self.dbz_3d = iris_data.dbz_merged
+        self.dbz_filtered = iris_data.dbz_filtered
+        self.dbz_unfiltered = iris_data.dbz_unfiltered
         self.dbz_elevs = iris_data.dbz_elevs
         self.dop_elevs = iris_data.dopvol_elevs
 
