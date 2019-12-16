@@ -335,7 +335,7 @@ class IrisProcessor(Processor):
         Plot every level of the dbz output
         """
 
-        max_range = 150.0
+        max_range = self.config["plot_settings"]["max_range"]
         num_elevs = len(iris_data.dbz_elevs)
         print("angles:", iris_data.dbz_elevs)
 
@@ -355,6 +355,31 @@ class IrisProcessor(Processor):
             print(f"Plotting: {label}")
             self.plotter.set_data(data, label, iris_data.datetime, self.metadata, max_range)
             self.plotter.save_plot(min_value=-15.0, max_value=40.0)
+
+
+    def set_joint_product(self, iris_data):
+        """
+        Collapsing 3D dbz product into a 2D flat grid.
+        """
+
+        # Let's mask out anything over 30, first
+        bug_threshold = 30.0
+        final_dbz = np.ma.masked_where(iris_data.dbz_filtered >= bug_threshold, iris_data.dbz_filtered)
+
+        iris_data.joint_product = np.amax(final_dbz, axis=0)
+        print(type(iris_data.joint_product))
+        print("joint shape:", iris_data.joint_product.shape)
+
+
+    def plot_joint_product(self, iris_data):
+
+        max_range = self.config["plot_settings"]["max_range"]
+
+        data = iris_data.joint_product[:,:]
+        label = f"joint_product"
+        print(f"Plotting: {label}")
+        self.plotter.set_data(data, label, iris_data.datetime, self.metadata, max_range)
+        self.plotter.save_plot(min_value=-15.0, max_value=40.0)
 
 
     def process_set(self, iris_set):
@@ -382,6 +407,7 @@ class IrisProcessor(Processor):
         nc_filename = self.output_filename(iris_data.datetime)
 
         iris_data.dbz_filtered = iris_data.merge_dbz()
+        self.set_joint_product(iris_data)
 
         iris_output = bugtracker.io.models.IrisOutput(self.metadata, self.grid_info)
         iris_output.populate(iris_data)
@@ -390,6 +416,8 @@ class IrisProcessor(Processor):
 
         self.plot_levels(iris_data, filtered=False)
         self.plot_levels(iris_data, filtered=True)
+        self.plot_joint_product(iris_data)
+
 
 
     def process_sets(self, iris_sets):

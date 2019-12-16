@@ -50,10 +50,12 @@ class BaseOutput(abc.ABC):
         nc_dbz_elevs = dset.createVariable("dbz_elevs", float, ('dbz_elevs',))
         nc_dbz_filtered = dset.createVariable("dbz_filtered", float, ('dbz_elevs','azims','gates'))
         nc_dbz_unfiltered = dset.createVariable("dbz_unfiltered", float, ('dbz_elevs','azims','gates'))
+        nc_dbz_joint = dset.createVariable("dbz_joint", float, ('azims','gates'))
 
         nc_dbz_elevs[:] = dbz_elevs[:]
         nc_dbz_filtered[:,:,:] = self.dbz_filtered[:,:,:]
         nc_dbz_unfiltered[:,:,:] = self.dbz_unfiltered[:,:,:]
+        nc_dbz_joint = self.joint_product[:,:]
 
         dset.close()
 
@@ -82,6 +84,17 @@ class BaseOutput(abc.ABC):
         if dbz_gates != gates:
             raise ValueError(f"Incompatible gates: {dbz_gates} != {gates}")
 
+        if self.joint_product is None:
+            raise ValueError("joint_product cannot be null.")
+
+        joint = self.joint_product.shape
+
+        if len(joint) != 2:
+            raise ValueError("joint_product must be a 2D array.")
+
+        if azims != joint[0] or gates != joint[1]:
+            raise ValueError(f"Incompatible dims for joint_product: {joint[0]},{joint[1]}")
+
 
 class IrisOutput(BaseOutput):
     """
@@ -101,6 +114,8 @@ class IrisOutput(BaseOutput):
 
         self.dbz_filtered = iris_data.dbz_filtered
         self.dbz_unfiltered = iris_data.dbz_unfiltered
+        self.joint_product = iris_data.joint_product
+
         self.dbz_elevs = iris_data.dbz_elevs
         self.dop_elevs = iris_data.dopvol_elevs
 
