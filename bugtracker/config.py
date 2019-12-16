@@ -20,7 +20,19 @@ import os
 import json
 
 
-def load(config_path):
+def locate_path(base_path):
+
+    backup_path = "../apps/bugtracker.json"
+
+    if os.path.isfile(base_path):
+        return base_path
+    elif os.path.isfile(backup_path):
+        return backup_path
+    else:
+        raise FileNotFoundError(base_path)
+
+
+def load(base_path):
     """
     This function provides a simple way to call load a .json
     config file.
@@ -29,8 +41,7 @@ def load(config_path):
     must be run from within the /apps folder.
     """
 
-    if not os.path.isfile(config_path):
-        raise FileNotFoundError(config_path)
+    config_path = locate_path(base_path)
 
     config_file = open(config_path, mode='r')
     config_json = json.load(config_file)
