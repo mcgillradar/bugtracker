@@ -1,0 +1,89 @@
+"""
+This file is part of Bugtracker
+Copyright (C) 2019  McGill Radar Group
+
+Bugtracker is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Bugtracker is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Bugtracker.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
+"""
+Plotting a TargetID array
+"""
+
+import os
+import glob
+import datetime
+
+import numpy as np
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.colors
+import geopy
+import geopy.distance
+import netCDF4 as nc
+
+from bugtracker.plots.radial import RadialPlotter
+
+
+class TargetIdPlotter(RadialPlotter):
+
+    def __init__(self, lats, lons, output_folder):
+
+        super().__init__(lats, lons, output_folder)
+
+
+    def _plot_target_id(self):
+
+        print("type:", type(self.data))
+
+        colors = ['red', 'blue', 'green']
+        cmap = matplotlib.colors.ListedColormap(colors)
+        
+        #bounds=[0.5,1,2,3,4]
+        #norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
+        
+        plt.pcolormesh(self.lons, self.lats, self.data, cmap=cmap)
+        cb = plt.colorbar()
+        cb.set_ticks(np.linspace(0,5,num=11))
+        #cb.set_ticklabels(colors)
+
+
+    def save_plot(self):
+
+
+        self._fill_wedge()
+        self._set_range()
+
+        aspect = self.calculate_aspect()
+        self.ax = plt.axes(projection=ccrs.PlateCarree(), aspect=aspect)
+        self.ax.set_xlabel('Longitude')
+        self.ax.set_ylabel('Latitude')
+
+        print("ax type:", type(self.ax))
+
+        self._set_grid()
+        self._plot_target_id()
+        self._add_features()
+        self._set_cross()
+        self._set_circles()
+
+        plt.title(self._get_title(self.label, self.plot_datetime))
+        self.ax.set_extent(self.range)
+
+        plot_filename = self.plot_datetime.strftime("%Y%m%d%H%M") + "_" + self.label + ".png"
+        output_file = os.path.join(self.output_folder, plot_filename)
+
+        plt.savefig(output_file, dpi=200)
+        plt.gcf().clear()

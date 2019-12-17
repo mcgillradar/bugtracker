@@ -36,7 +36,6 @@ import geopy.distance
 import netCDF4 as nc
 
 
-
 class RadialPlotter():
 
     """
