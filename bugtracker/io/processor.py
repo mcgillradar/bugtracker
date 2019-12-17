@@ -383,6 +383,13 @@ class IrisProcessor(Processor):
 
 
     def plot_target_id(self, id_matrix, iris_data):
+        """
+        Creating TargetIdPlotter from RadialPlotter
+        """
+        lats = self.plotter.lats
+        lons = self.plotter.lons
+        output_folder = self.plotter.output_folder
+        id_plotter = bugtracker.plots.identify.TargetIdPlotter(lats, lons, output_folder)
 
         max_range = self.config["plot_settings"]["max_range"]
 
@@ -395,8 +402,8 @@ class IrisProcessor(Processor):
             data = id_matrix[x,:,:]
             label = f"{prefix}_angle_{elev:.1f}"
             print(f"Plotting: {label}")
-            self.plotter.set_data(data, label, iris_data.datetime, self.metadata, max_range)
-            self.plotter.save_plot()
+            id_plotter.set_data(data, label, iris_data.datetime, self.metadata, max_range)
+            id_plotter.save_plot()
 
 
     def fill_clutter(self, init_elevs, init_data, iris_data):

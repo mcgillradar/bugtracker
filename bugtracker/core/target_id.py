@@ -97,7 +97,8 @@ class TargetId():
         self.id_matrix = np.zeros(self.dims, dtype=int)
 
         bug_condition = np.logical_and(self.dbz < self.max_dbz_bugs, self.dbz > self.min_dbz_bugs)
-        
+        bug_condition = np.logical_and(bug_condition, np.logical_not(np.ma.getmask(self.dbz)))
+
         # Successively writing target classifications, with higher
         # priority classes overwriting previous.
 

@@ -46,9 +46,11 @@ class TargetIdPlotter(RadialPlotter):
 
     def _plot_target_id(self):
 
+        self.data = np.ma.masked_where(self.data == 0, self.data)
+
         colors = ['red', 'blue', 'green']
         cmap = matplotlib.colors.ListedColormap(colors)
-        
+
         plt.pcolormesh(self.lons, self.lats, self.data, cmap=cmap)
         cb = plt.colorbar()
 
