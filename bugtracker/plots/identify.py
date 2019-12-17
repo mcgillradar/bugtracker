@@ -46,18 +46,15 @@ class TargetIdPlotter(RadialPlotter):
 
     def _plot_target_id(self):
 
-        print("type:", type(self.data))
-
         colors = ['red', 'blue', 'green']
         cmap = matplotlib.colors.ListedColormap(colors)
         
-        #bounds=[0.5,1,2,3,4]
-        #norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
-        
         plt.pcolormesh(self.lons, self.lats, self.data, cmap=cmap)
         cb = plt.colorbar()
-        cb.set_ticks(np.linspace(0,5,num=11))
-        #cb.set_ticklabels(colors)
+
+        # This will need to be modified if more categories are added.
+        cb.set_ticks([1 + 1/3, 2.0, 3 - 1/3])
+        cb.set_ticklabels(['clutter','rain','bugs'])
 
 
     def save_plot(self):

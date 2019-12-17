@@ -382,7 +382,74 @@ class IrisProcessor(Processor):
         self.plotter.save_plot(min_value=-15.0, max_value=40.0)
 
 
+    def plot_target_id(self, id_matrix, iris_data):
+
+        max_range = self.config["plot_settings"]["max_range"]
+
+        prefix = "target_id"
+        dbz_elevs = iris_data.dbz_elevs
+        num_dbz_elevs = len(dbz_elevs)
+
+        for x in range(0, num_dbz_elevs):
+            elev = dbz_elevs[x]
+            data = id_matrix[x,:,:]
+            label = f"{prefix}_angle_{elev:.1f}"
+            print(f"Plotting: {label}")
+            self.plotter.set_data(data, label, iris_data.datetime, self.metadata, max_range)
+            self.plotter.save_plot()
+
+
+    def fill_clutter(self, init_elevs, init_data, iris_data):
+
+        num_dbz_elevs = len(iris_data.dbz_elevs)
+        combined_dims = (num_dbz_elevs, self.grid_info.azims, self.grid_info.gates)
+
+        clutter_grid = np.zeros(combined_dims, dtype=bool)
+
+        if len(init_elevs) != init_data.shape[0]:
+            raise ValueError(f"Incompatible array shape: {init_data.shape}")
+
+        for x in range(0, len(init_elevs)):
+            current_angle = init_elevs[x]
+            idx = iris_data.dbz_elevs.index(current_angle)
+            clutter_grid[idx,:,:] = init_data[x,:,:]
+
+        return clutter_grid
+
+
+    def combine_clutter(self, convol, dopvol, iris_data):
+        # Returns numpy boolean array
+
+        print("dopvol_elevs:", iris_data.dopvol_elevs)
+        print("convol_elevs:", iris_data.convol_elevs)
+        print("dbz_elevs:", iris_data.dbz_elevs)
+
+        clutter_convol = self.fill_clutter(iris_data.convol_elevs, convol, iris_data)
+        clutter_dopvol = self.fill_clutter(iris_data.dopvol_elevs, dopvol, iris_data)
+
+        combined = np.logical_or(clutter_convol, clutter_dopvol)
+        return combined
+
+
+    def combine_precip(self, convol, dopvol, iris_data):
+
+        num_dbz_elevs = len(iris_data.dbz_elevs)
+        combined_dims = (num_dbz_elevs, self.grid_info.azims, self.grid_info.gates)
+        combined_filter = np.zeros(combined_dims, dtype=bool)
+
+        # For precip, the filter is uniform over elevation.
+        for x in range(0, num_dbz_elevs):
+            combined_filter[x,:,:] = convol[0,:,:]
+
+        return combined_filter
+
+
     def process_set(self, iris_set):
+        """
+        The logic in this function is a bit too complicated, and
+        should be refactored at some point. This method should not
+        be handling the internal data of the Filter objects.
+        """
 
         iris_data = bugtracker.core.iris.IrisData(iris_set)
         iris_data.fill_grids()
@@ -396,8 +463,12 @@ class IrisProcessor(Processor):
         self.filter_precip(convol_precip, dopvol_precip, iris_data)
 
         # Combining ClutterFilter with PrecipFilter
-        convol_joint = np.logical_or(self.convol_clutter.astype(bool), convol_precip.filter_3d)
-        dopvol_joint = np.logical_or(self.dopvol_clutter.astype(bool), dopvol_precip.filter_3d)
+
+        convol_clutter_bool = self.convol_clutter.astype(bool)
+        dopvol_clutter_bool = self.dopvol_clutter.astype(bool)
+
+        convol_joint = np.logical_or(convol_clutter_bool, convol_precip.filter_3d)
+        dopvol_joint = np.logical_or(dopvol_clutter_bool, dopvol_precip.filter_3d)
 
         iris_data.dbz_unfiltered = iris_data.merge_dbz()
 
@@ -414,10 +485,18 @@ class IrisProcessor(Processor):
         iris_output.validate()
         iris_output.write(nc_filename)
 
+        joint_precip_bool = self.combine_precip(convol_precip.filter_3d, dopvol_precip.filter_3d, iris_data)
+        joint_clutter_bool = self.combine_clutter(convol_clutter_bool, dopvol_clutter_bool, iris_data)
+
+        target_id = bugtracker.core.target_id.TargetId(iris_data.dbz_filtered, joint_clutter_bool, joint_precip_bool)
+        id_matrix = target_id.export_matrix()
+
+        iris_output.append_target_id(nc_filename, id_matrix)
+
         self.plot_levels(iris_data, filtered=False)
         self.plot_levels(iris_data, filtered=True)
         self.plot_joint_product(iris_data)
-
+        self.plot_target_id(id_matrix, iris_data)
 
 
     def process_sets(self, iris_sets):

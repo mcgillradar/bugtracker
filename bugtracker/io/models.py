@@ -96,6 +96,27 @@ class BaseOutput(abc.ABC):
             raise ValueError(f"Incompatible dims for joint_product: {joint[0]},{joint[1]}")
 
 
+    def append_target_id(self, filename, id_matrix):
+        """
+        Appends. File is created in super class.
+
+        Imporant to ensure file is not corrupted before
+        saving to netCDF4. If you are doing batch processing
+        of netCDF4, you may want to include a try/except block
+        to handle ValueError.
+        """
+
+        self.validate()
+
+        dset = nc.Dataset(filename, mode="a")
+
+        nc_target_id = dset.createVariable("target_id", int, ('dbz_elevs','azims','gates'))
+
+        nc_target_id[:,:,:] = id_matrix[:,:,:]
+
+        dset.close()
+
+
 class IrisOutput(BaseOutput):
     """
     Test
