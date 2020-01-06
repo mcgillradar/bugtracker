@@ -510,6 +510,9 @@ class IrisProcessor(Processor):
 
         self.init_plotter()
 
+        if len(iris_sets) == 0:
+            raise ValueError("There are 0 IrisSet entries - cannot process.")
+
         for iris_set in iris_sets:
             self.process_set(iris_set)
 
