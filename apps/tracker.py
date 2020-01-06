@@ -81,6 +81,8 @@ def get_closest_set(args, config):
 
 def main():
 
+    t0 = time.time()
+
     config = bugtracker.config.load("./bugtracker.json")
 
     # First step "minimal", create a batch from command-line inputs
@@ -115,6 +117,15 @@ def main():
 
     processor = bugtracker.io.processor.IrisProcessor(metadata, grid_info)
     processor.init_plotter()
+
+    t1 = time.time()
+
     processor.process_sets(iris_set_list)
+
+    t2 = time.time()
+
+    print("Total time report:")
+    print(f"Preliminaries: {(t1-t0):.3f} s")
+    print(f"Processor execution: {(t2-t1):.3f} s")
 
 main()

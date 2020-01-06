@@ -458,16 +458,22 @@ class IrisProcessor(Processor):
         be handling the internal data of the Filter objects.
         """
 
+        t0 = time.time()
+
         iris_data = bugtracker.core.iris.IrisData(iris_set)
         iris_data.fill_grids()
         # plot the unmodified files
         #self.plot_iris(iris_data, "raw")
         
+        t1 = time.time()
+
         # construct the PrecipFilter from iris_set
         convol_precip = PrecipFilter(self.metadata, self.grid_info, self.convol_angles)
         dopvol_precip = PrecipFilter(self.metadata, self.grid_info, self.dopvol_angles)
 
         self.filter_precip(convol_precip, dopvol_precip, iris_data)
+
+        t2 = time.time()
 
         # Combining ClutterFilter with PrecipFilter
 
@@ -477,7 +483,11 @@ class IrisProcessor(Processor):
         convol_joint = np.logical_or(convol_clutter_bool, convol_precip.filter_3d)
         dopvol_joint = np.logical_or(dopvol_clutter_bool, dopvol_precip.filter_3d)
 
+        t3 = time.time()
+
         iris_data.dbz_unfiltered = iris_data.merge_dbz()
+
+        t4 = time.time()
 
         # modify the files based on filters
         self.impose_filter(iris_data, convol_joint, dopvol_joint)
@@ -492,6 +502,8 @@ class IrisProcessor(Processor):
         iris_output.validate()
         iris_output.write(nc_filename)
 
+        t5 = time.time()
+
         joint_precip_bool = self.combine_precip(convol_precip.filter_3d, dopvol_precip.filter_3d, iris_data)
         joint_clutter_bool = self.combine_clutter(convol_clutter_bool, dopvol_clutter_bool, iris_data)
 
@@ -500,10 +512,22 @@ class IrisProcessor(Processor):
 
         iris_output.append_target_id(nc_filename, id_matrix)
 
+        t6 = time.time()
+
         self.plot_levels(iris_data, filtered=False)
         self.plot_levels(iris_data, filtered=True)
         self.plot_joint_product(iris_data)
         self.plot_target_id(id_matrix, iris_data)
+
+        t7 = time.time()
+
+        print(f"Fill grids, construct data: {(t1-t0):.3f} s")
+        print(f"Precip filter: {(t2-t1):.3f} s")
+        print(f"Combining filters: {(t3-t2):.3f} s")
+        print(f"Vertical merge: {(t4-t3):.3f} s")
+        print(f"Output product NETCDF4 {(t5-t4):.3f} s")
+        print(f"Target ID setup and export {(t6-t5):.3f} s")
+        print(f"Plotting radial graphs {(t7-t6):.3f} s")
 
 
     def process_sets(self, iris_sets):
