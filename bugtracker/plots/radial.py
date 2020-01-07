@@ -47,7 +47,7 @@ class RadialPlotter():
         self.output_folder = output_folder
 
         if not os.path.isdir(output_folder):
-            raise FileError("Folder not found:", output_folder)
+            raise FileNotFoundError("Folder not found:", output_folder)
 
         self.ax = None
         self.fig = None
