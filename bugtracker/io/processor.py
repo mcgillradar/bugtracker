@@ -82,25 +82,6 @@ class Processor(abc.ABC):
             raise ValueError(f"Altitude grid invalid dims: {self.altitude.shape}")
 
 
-    def init_plotter(self):
-        """
-        Activate the RadialPlotter. This code may need to be significantly
-        modified if we need to do parallel plotting (multi-cpu to speed up
-        the plotting of a large set of files).
-        """
-
-        radar_id = self.metadata.radar_id
-        plot_dir = self.config['plot_dir']
-        output_folder = os.path.join(plot_dir, radar_id)
-
-        if not os.path.isdir(plot_dir):
-            FileNotFoundError(f"This folder should have been created {plot_dir}")
-
-        if not os.path.isdir(output_folder):
-            os.mkdir(output_folder)
-
-        self.plotter = bugtracker.plots.radial.RadialPlotter(self.lats, self.lons, output_folder)
-
     @abc.abstractmethod
     def load_specific_calib(self):
         """
@@ -330,33 +311,6 @@ class IrisProcessor(Processor):
         return os.path.join(output_folder, output_filename)
 
 
-    def plot_levels(self, iris_data, filtered=True):
-        """
-        Plot every level of the dbz output
-        """
-
-        max_range = self.config["plot_settings"]["max_range"]
-        num_elevs = len(iris_data.dbz_elevs)
-        print("angles:", iris_data.dbz_elevs)
-
-        prefix = None
-        dbz_field = None
-        if filtered:
-            prefix = "filtered"
-            dbz_field = iris_data.dbz_filtered
-        else:
-            prefix = "unfiltered"
-            dbz_field = iris_data.dbz_unfiltered
-
-        for x in range(0,num_elevs):
-            elev = iris_data.dbz_elevs[x]
-            data = dbz_field[x,:,:]
-            label = f"{prefix}_angle_{elev:.1f}"
-            print(f"Plotting: {label}")
-            self.plotter.set_data(data, label, iris_data.datetime, self.metadata, max_range)
-            self.plotter.save_plot(min_value=-15.0, max_value=40.0)
-
-
     def set_joint_product(self, iris_data):
         """
         Collapsing 3D dbz product into a 2D flat grid.
@@ -369,41 +323,6 @@ class IrisProcessor(Processor):
         iris_data.joint_product = np.amax(final_dbz, axis=0)
         print(type(iris_data.joint_product))
         print("joint shape:", iris_data.joint_product.shape)
-
-
-    def plot_joint_product(self, iris_data):
-
-        max_range = self.config["plot_settings"]["max_range"]
-
-        data = iris_data.joint_product[:,:]
-        label = f"joint_product"
-        print(f"Plotting: {label}")
-        self.plotter.set_data(data, label, iris_data.datetime, self.metadata, max_range)
-        self.plotter.save_plot(min_value=-15.0, max_value=40.0)
-
-
-    def plot_target_id(self, id_matrix, iris_data):
-        """
-        Creating TargetIdPlotter from RadialPlotter
-        """
-        lats = self.plotter.lats
-        lons = self.plotter.lons
-        output_folder = self.plotter.output_folder
-        id_plotter = bugtracker.plots.identify.TargetIdPlotter(lats, lons, output_folder)
-
-        max_range = self.config["plot_settings"]["max_range"]
-
-        prefix = "target_id"
-        dbz_elevs = iris_data.dbz_elevs
-        num_dbz_elevs = len(dbz_elevs)
-
-        for x in range(0, num_dbz_elevs):
-            elev = dbz_elevs[x]
-            data = id_matrix[x,:,:]
-            label = f"{prefix}_angle_{elev:.1f}"
-            print(f"Plotting: {label}")
-            id_plotter.set_data(data, label, iris_data.datetime, self.metadata, max_range)
-            id_plotter.save_plot()
 
 
     def fill_clutter(self, init_elevs, init_data, iris_data):
@@ -514,7 +433,7 @@ class IrisProcessor(Processor):
 
         t6 = time.time()
 
-        plot_queue = bugtracker.plots.parallel.ParallelPlotter(self.lats, self.lons, iris_data)
+        plot_queue = bugtracker.plots.parallel.ParallelPlotter(self.lats, self.lons, self.metadata, iris_data, id_matrix)
 
         """
         self.plot_levels(iris_data, filtered=False)
@@ -535,8 +454,6 @@ class IrisProcessor(Processor):
 
 
     def process_sets(self, iris_sets):
-
-        self.init_plotter()
 
         if len(iris_sets) == 0:
             raise ValueError("There are 0 IrisSet entries - cannot process.")

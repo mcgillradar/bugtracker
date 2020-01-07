@@ -116,7 +116,6 @@ def main():
     print("grid_info:", grid_info)
 
     processor = bugtracker.io.processor.IrisProcessor(metadata, grid_info)
-    processor.init_plotter()
 
     t1 = time.time()
 
