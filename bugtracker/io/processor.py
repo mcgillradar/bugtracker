@@ -23,6 +23,7 @@ import os
 import abc
 import datetime
 import time
+import math
 
 import numpy as np
 import netCDF4 as nc
@@ -223,6 +224,10 @@ class IrisProcessor(Processor):
 
         angle_list = []
         dbz_list = []
+        height_list = []
+
+        # Above this threshold, we consider it rain.
+        max_dbz_per_km = -5.0
 
         for x in range(0, len(self.convol_angles)):
             angle = self.convol_angles[x]
@@ -248,6 +253,17 @@ class IrisProcessor(Processor):
                     dbz = zone_flat[y]
                     angle_list.append(angle)
                     dbz_list.append(dbz)
+                    # Making trig approximation h = x*tan(theta)
+                    # Note, distance must be in km, and theta must
+                    # be converted to radians.
+                    # TODO: Use builtin pyart methods.
+                    rad_angle = math.radians(angle)
+                    # Using midpoint approximation
+                    midpoint = int((min_gate + max_gate) / 2.0)
+                    # Convert to kilometers
+                    distance = midpoint * self.grid_info.gate_step * 0.001
+                    height = distance * math.tan(rad_angle)
+                    height_list.append(height)
 
         if len(angle_list) != len(dbz_list):
             raise ValueError("Zone slope error")
@@ -259,7 +275,7 @@ class IrisProcessor(Processor):
         if len(angle_set) < 2:
             return np.nan
         else:
-            slope, intercept, r_value, p_value, std_err = stats.linregress(angle_list, dbz_list)
+            slope, intercept, r_value, p_value, std_err = stats.linregress(height_list, dbz_list)
             return slope
 
 
@@ -434,13 +450,6 @@ class IrisProcessor(Processor):
         t6 = time.time()
 
         plot_queue = bugtracker.plots.parallel.ParallelPlotter(self.lats, self.lons, self.metadata, iris_data, id_matrix)
-
-        """
-        self.plot_levels(iris_data, filtered=False)
-        self.plot_levels(iris_data, filtered=True)
-        self.plot_joint_product(iris_data)
-        self.plot_target_id(id_matrix, iris_data)
-        """
 
         t7 = time.time()
 
