@@ -158,4 +158,6 @@ class ParallelPlotter:
 
         self.pool = mp.Pool()
         self.pool.starmap(plot_worker, args)
+        self.pool.close()
+        self.pool.join()
 
