@@ -36,11 +36,12 @@ class NexradDownloader:
 
     def __init__(self, local_root, args):
         self.args = args
-
+        self.local_root = local_root
         self.remote_root = "https://noaa-nexrad-level2.s3.amazonaws.com"
         self.radar = args.radar
         self.date_list = self.get_dates()
         self.file_list = []
+        self.download_list = []
 
     def get_dates(self):
         """
@@ -82,7 +83,7 @@ class NexradDownloader:
 
         url = f"{self.remote_root}/?delimiter=%2F&prefix={year}%2F{month}%2F{day}%2F{code}%2F"
 
-        print(url)
+        links = []
 
         xml_request = requests.get(url)
         tree = ElementTree.fromstring(xml_request.content)
@@ -94,11 +95,10 @@ class NexradDownloader:
                 link = desc.text
                 link_split = link.split("_")
                 if len(link_split) < 2 or link_split[-1].lower() == "mdm":
-                    print("Skipping:", link)
+                    # we want to exclude MDM records
+                    pass
                 else:
-                    print("Getting: ", link)
-
-                # we want to exclude MDM records
+                    links.append(link)
 
         return links
 
@@ -108,10 +108,23 @@ class NexradDownloader:
         Come up with list of all files that need to be downloaded
         """
 
+        all_links = []
+
         for date in self.date_list:
             links = self.scrape_page(date)
             print(date.strftime("%Y-%m-%d"))
             print(f"Number of links {len(links)}")
+            all_links.extend(links)
+
+        all_links.sort()
+        self.remote_files = all_links
+
+
+    def get_local_filename(self, basename):
+
+        code = self.radar
+        local_filename = os.path.join(self.local_root, code, basename)
+        return local_filename
 
 
     def exclude_local(self):
@@ -120,13 +133,24 @@ class NexradDownloader:
         save bandwidth.
         """
 
-        pass
+        self.file_list = []
+
+        for remote_file in self.remote_files:
+            base = os.path.basename(remote_file)
+            local_filename = self.get_local_filename(base)
+            remote_full = os.path.join(self.remote_root, remote_file)
+            if os.path.isfile(local_filename):
+                print(f"File already downloaded, skipping: {local_filename}")
+            else:
+                self.file_list.append(remote_full)
 
 
     def download(self):
         """
         Download all files on 
         """
+
+        download_dir = os.path.join(self.local_root, self.radar)
 
         for file in self.file_list:
             subprocess.call(f"wget {file} -P {download_dir}", shell=True)
