@@ -45,11 +45,22 @@ import bugtracker
 
 
 def check_args(args):
+    """
+    Performing validation on the command-line arguments
+    provided by argparse
+    """
 
-    valid_stations = ['xam', 'wgj']
+    valid_stations = ['xam', 'wgj', 'kcbw']
 
     if args.station.lower() not in valid_stations:
         raise ValueError(f"Invalid station {args.station}")
+
+    valid_dtypes = ['iris', 'nexrad', 'odim']
+
+    if args.dtype.lower() not in valid_dtypes:
+        msg = f"Unsupported dtype {args.dtype}\n"
+        msg += f"Supported types are {valid_dtypes}\n"
+        raise ValueError(msg)
 
 
 def get_closest_set(args, config):
@@ -59,7 +70,7 @@ def get_closest_set(args, config):
     """
 
     station_code = args.station.lower()
-    archive_dir = config['archive_dir']
+    archive_dir = config['input_dirs']['iris']
     iris_current_dir = os.path.join(archive_dir, station_code)
     if not os.path.isdir(iris_current_dir):
         raise FileNotFoundError(iris_current_dir)
@@ -79,22 +90,7 @@ def get_closest_set(args, config):
     return closest_set
 
 
-def main():
-
-    t0 = time.time()
-
-    config = bugtracker.config.load("./bugtracker.json")
-
-    # First step "minimal", create a batch from command-line inputs
-    parser = argparse.ArgumentParser()
-    parser.add_argument("start", help="Data timestamp YYYYmmddHHMM")
-    parser.add_argument("station", help="3 letter station code")
-    parser.add_argument("-dt", "--data_hours", type=int, default=0)
-    parser.add_argument("-r", "--range", default=100, type=int, help="Maximum range (km)")
-    parser.add_argument('-d', '--debug', action='store_true', help="Debug plotting")
-
-    args = parser.parse_args()
-    check_args(args)
+def iris_tracker(args, config):
 
     iris_set_list = []
 
@@ -105,7 +101,7 @@ def main():
     else:
         time_start = datetime.datetime.strptime(args.start, "%Y%m%d%H%M")
         data_mins = args.data_hours * 60
-        iris_dir = os.path.join(config['archive_dir'], args.station)
+        iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
         iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
         iris_set_list = iris_collection.time_range(time_start, data_mins)
 
@@ -116,15 +112,48 @@ def main():
     print("grid_info:", grid_info)
 
     processor = bugtracker.io.processor.IrisProcessor(metadata, grid_info)
-
-    t1 = time.time()
-
     processor.process_sets(iris_set_list)
 
-    t2 = time.time()
 
-    print("Total time report:")
-    print(f"Preliminaries: {(t1-t0):.3f} s")
-    print(f"Processor execution: {(t2-t1):.3f} s")
+def nexrad_tracker(args, config):
+
+    raise NotImplementedError(args.dtype)
+
+
+def odim_tracker(args, config):
+
+    raise NotImplementedError(args.dtype)
+
+
+def main():
+
+    t0 = time.time()
+
+    config = bugtracker.config.load("./bugtracker.json")
+
+    # First step "minimal", create a batch from command-line inputs
+    parser = argparse.ArgumentParser()
+    parser.add_argument("start", help="Data timestamp YYYYmmddHHMM")
+    parser.add_argument("dtype", help="Data type (either iris, nexrad, or odim)")
+    parser.add_argument("station", help="3 letter station code")
+    parser.add_argument("-dt", "--data_hours", type=int, default=0)
+    parser.add_argument("-r", "--range", default=100, type=int, help="Maximum range (km)")
+    parser.add_argument('-d', '--debug', action='store_true', help="Debug plotting")
+
+    args = parser.parse_args()
+    check_args(args)
+
+    dtype = args.dtype.lower()
+
+    if dtype == 'iris':
+        iris_tracker(args, config)
+    elif dtype == 'nexrad':
+        nexrad_tracker(args, config)
+    elif dtype == 'odim':
+        odim_tracker(args, config)
+    else:
+        # Unreachable code, given the previous check_args()
+        raise ValueError(f"Invalid dtype {dtype}")
+
 
 main()

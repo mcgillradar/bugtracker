@@ -162,7 +162,7 @@ def run_calib(args, metadata, grid_info, calib_grid):
     print("Data mins:", data_mins)
 
     # Let's get a list of 
-    iris_dir = os.path.join(config['archive_dir'], args.station)
+    iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
     print(iris_dir)
     iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
     calib_sets = iris_collection.time_range(time_start, data_mins)
@@ -203,7 +203,7 @@ def main():
     cache_manager.make_folders()
 
     config = bugtracker.config.load("./bugtracker.json")
-    iris_dir = os.path.join(config['archive_dir'], args.station)
+    iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
     iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
     if len(iris_collection.sets) == 0:
         raise ValueError("Invalid length")

@@ -86,7 +86,7 @@ def iris_set_xam(config):
     """
 
     radar_id = "xam"
-    archive_dir = config['archive_dir']
+    archive_dir = config['input_dirs']['iris']
     radar_dir = os.path.join(archive_dir, radar_id)
     iris_collection = bugtracker.io.iris.IrisCollection(radar_dir, radar_id)
 
@@ -105,7 +105,7 @@ def iris_set_wgj(config):
     """
 
     radar_id = "wgj"
-    archive_dir = config['archive_dir']
+    archive_dir = config['input_dirs']['iris']
     radar_dir = os.path.join(archive_dir, radar_id)
     iris_collection = bugtracker.io.iris.IrisCollection(radar_dir, radar_id)
 
