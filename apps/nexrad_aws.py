@@ -26,6 +26,7 @@ from xml.etree import ElementTree
 import requests
 from bs4 import BeautifulSoup, SoupStrainer
 
+import bugtracker.config
 
 """
 NEXRAD uses an XML pipeline
@@ -79,7 +80,7 @@ class NexradDownloader:
         year = date.strftime("%Y")
         month = date.strftime("%m")
         day = date.strftime("%d")
-        code = self.radar
+        code = self.radar.upper()
 
         url = f"{self.remote_root}/?delimiter=%2F&prefix={year}%2F{month}%2F{day}%2F{code}%2F"
 
@@ -173,10 +174,12 @@ def nexrad():
     parser.add_argument("end", help="Data timestamp YYYYmmdd")
     parser.add_argument("radar", help="4 letter radar code")
     args = parser.parse_args()
-    args.radar = args.radar.upper()
+    args.radar = args.radar.lower()
     print(args)
 
-    download_dir = "/storage/spruce/nexrad_data/aws"
+    config = bugtracker.config.load("./bugtracker.json")
+
+    download_dir = config['input_dirs']['nexrad']
     # Make radar directory if it doesn't exist
     radar_folder = os.path.join(download_dir, args.radar)
 
