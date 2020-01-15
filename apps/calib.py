@@ -148,9 +148,9 @@ def plot_calib_graphs(args, config, metadata, grid_info):
 
 
 
-def run_calib(args, metadata, grid_info, calib_grid):
+def run_iris_calib(args, config, metadata, grid_info):
 
-    config = bugtracker.config.load("./bugtracker.json")
+    calib_grid = get_srtm(metadata, grid_info)
 
     calib_controller = bugtracker.calib.calib.IrisController(args, metadata, grid_info)
     calib_controller.set_grids(calib_grid)
@@ -179,12 +179,21 @@ def run_calib(args, metadata, grid_info, calib_grid):
     calib_controller.save_masks()
 
 
+def run_nexrad_calib(args, config, metadata, grid_info):
+
+    raise NotImplementedError("NEXRAD")
+
+
+def run_odim_calib(args, config, metadata, grid_info):
+
+    raise NotImplementedError("ODIM_H5")
 
 
 def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("timestamp", help="Data timestamp YYYYmmddHHMM")
+    parser.add_argument("dtype", help="Data type (either iris, nexrad, or odim)")
     parser.add_argument("station", help="3 letter station code")
     parser.add_argument("-dt", "--data_hours", type=int, default=6)
     parser.add_argument('-d', '--debug', action='store_true', help="Debug plotting")
@@ -193,6 +202,7 @@ def main():
     # Reset
 
     args = parser.parse_args()
+    dtype = args.dtype.lower()
 
     cache_manager = bugtracker.core.cache.CacheManager()
 
@@ -201,21 +211,46 @@ def main():
         cache_manager.reset()
 
     cache_manager.make_folders()
-
     config = bugtracker.config.load("./bugtracker.json")
-    iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
-    iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
-    if len(iris_collection.sets) == 0:
-        raise ValueError("Invalid length")
 
-    metadata = bugtracker.core.metadata.from_iris_set(iris_collection.sets[0])
-    grid_info = bugtracker.core.iris.iris_grid()
-    calib_grid = get_srtm(metadata, grid_info)
+    metadata = None
+    grid_info = None
+
+    # Getting metadata and grid_info
+
+    if dtype == 'iris':
+        iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
+        iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
+        if len(iris_collection.sets) == 0:
+            raise ValueError("Invalid length")
+        metadata = bugtracker.core.metadata.from_iris_set(iris_collection.sets[0])
+        grid_info = bugtracker.core.iris.iris_grid()
+
+    elif dtype == 'nexrad':
+        metadata = None
+        grid_info = None
+
+    elif dtype == 'odim':
+        metadata = None
+        grid_info = None
+
+    else:
+        raise ValueError(f"Invalid dtype {dtype}")
+
+
+    # Either running or plotting, depending on input args
 
     if args.plot:
         plot_calib_graphs(args, config, metadata, grid_info)
     else:
-        run_calib(args, metadata, grid_info, calib_grid)
+        if dtype == 'iris':
+            run_iris_calib(args, config, metadata, grid_info)
+        elif dtype == 'nexrad':
+            run_nexrad_calib(args, config, metadata, grid_info)
+        elif dtype == 'odim':
+            run_odim_calib(args, config, metadata, grid_info)
+        else:
+            raise ValueError(f"Invalid dtype {dtype}")
 
 
 main()
