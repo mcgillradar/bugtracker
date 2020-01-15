@@ -49,6 +49,11 @@ class NexradManager:
 
 
     def get_closest(self, target_dt):
+        """
+        Get the closest radar scan to the specified date,
+        and return an error if the closest is more than 30mins away
+        or if no input files are found.
+        """
 
         current_year = target_dt.strftime("%Y")
         radar_upper = self.radar_id.upper()
@@ -62,12 +67,9 @@ class NexradManager:
         min_idx = -1
         min_diff = 999999999
 
-        print("num_files:", num_files)
-
         for x in range(0, num_files):
             current_file = all_files[x]
             file_dt = self.datetime_from_file(current_file)
-            print(f"file_dt: {file_dt}, target_dt: {target_dt}")
             diff = file_dt - target_dt
             total_seconds = abs(diff.total_seconds())
             if total_seconds < min_diff:
@@ -90,18 +92,30 @@ class NexradManager:
 
 
     def get_range(self, start, end):
+        """
+        Return all NEXRAD radar files within the specified
+        date range.
+        """
 
+        radar_lower = self.radar_id.lower()
         radar_upper = self.radar_id.upper()
-        glob_string = f"{radar_upper}{current_year}*_V06"
-        search = os.path.join(self.nexrad_dir, glob_string)
+        glob_string = f"{radar_upper}*_V06"
+        search = os.path.join(self.nexrad_dir, radar_lower, glob_string)
         all_files = glob.glob(search)
         all_files.sort()
 
-        file_list = []
+        range_list = []
 
-        for file in file_list:
+        for input_file in all_files:
+            current_dt = self.datetime_from_file(input_file)
+            if start <= current_dt and current_dt <= end:
+                range_list.append(input_file)
+
+        for file in range_list:
             if not os.path.isfile(file):
                 raise FileNotFoundError(f"File does not exist: {file}")
+
+        return range_list
 
 
     def extract_metadata(nexrad_file):
@@ -125,10 +139,17 @@ class NexradData:
         
         """
         Should be some grid verification checks
+        A basic assumption is that scan strategy might change, but
+        file structure should not change.
+
+        IE its fine if we go from scanning at 0.1, 0.3 and 0.5,
+        but if it somehow goes to a different number of scans altogether,
+        or the grid dimensions change, this should raise an exception.
+        """
+
+        """
+        Actually this assumption should be tested. How can we compare
+        the scans between 1990 and 2020? When/where does it shift?
         """
 
         pass
-
-        """
-        
-        """
