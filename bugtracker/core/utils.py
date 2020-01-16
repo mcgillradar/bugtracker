@@ -95,7 +95,7 @@ def latlon(grid_info, metadata):
     elevations = np.zeros(1, dtype=float)
 
     for x in range(0,azims):
-        azimuths[x,:] = (grid_info.azim_step) * x
+        azimuths[x,:] = (grid_info.azim_step) * x + grid_info.azim_offset
 
     for y in range(0, gates):
         # rescaling to meters from kilometers

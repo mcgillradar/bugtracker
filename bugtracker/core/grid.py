@@ -25,12 +25,13 @@ import pyart
 
 class GridInfo():
 
-    def __init__(self, gates, azims, gate_step, azim_step):
+    def __init__(self, gates, azims, gate_step, azim_step, azim_offset=0.0):
 
         self.gates = gates
         self.azims = azims
         self.gate_step = gate_step
         self.azim_step = azim_step
+        self.azim_offset = azim_offset
 
 
     def get_range(self):

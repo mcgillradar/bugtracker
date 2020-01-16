@@ -39,7 +39,8 @@ def group_angles(filename):
     num_azims = len(art.azimuth['data'])
 
     for x in range(0, num_azims):
-        print(art.azimuth['data'][x])
+        if x % 360 == 0:
+            print(f"{x}: {art.azimuth['data'][x]}")
         current_angle = art.elevation['data'][x]
         idx = find_closest_idx(angles, current_angle)
         counter_dict[idx] += 1
