@@ -130,9 +130,6 @@ class NexradManager:
         return grid_info
 
 
-
-
-
 class NexradData:
 
     def __init__(self, nexrad_file, metadata, grid_info):
