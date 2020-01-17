@@ -91,6 +91,10 @@ class Data:
 
         dset.setncattr_string("calib_start", timestamp)
         dset.setncattr("calib_hours", calib_hours)
+        dset.setncattr("azim_offset", self.grid_info.azim_offset)
+        dset.setncattr("gate_offset", self.grid_info.gate_offset)
+        dset.setncattr("azim_step", self.grid_info.azim_step)
+        dset.setncattr("gate_step", self.grid_info.gate_step)
 
         dset.createDimension("azims", azims)
         dset.createDimension("gates", gates)
