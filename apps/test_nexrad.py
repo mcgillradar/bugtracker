@@ -7,6 +7,7 @@ import numpy as np
 import pyart
 
 import bugtracker
+from bugtracker.plots.alignment import AlignmentPlotter
 
 
 def find_closest_idx(angles, current_angle):
@@ -82,32 +83,45 @@ def load_one(filename):
     print(art.azimuth['data'])
 
 
-def main():
+def print_fields(radar):
 
-    #radar_id = "ksfx"
-    radar_id = "kcbw"
-    config = bugtracker.config.load("./bugtracker.json")
+    fields = radar.fields
+
+    for field in fields:
+        print(field)
+        print(fields[field]['data'].shape)
+        print(fields[field]['data'].dtype)
+
+    print(radar.azimuth)
+    print(len(radar.azimuth['data']))
+    print(radar.elevation)
+    print(len(radar.elevation['data']))
+
+
+
+def get_closest(config, radar_id, target_dt):
 
     manager = bugtracker.io.nexrad.NexradManager(config, radar_id)
-
-    date_of_interest = datetime.datetime(2020,1,1,12)
-
-    closest = manager.get_closest(date_of_interest)
-    print("Closest:", closest)
-
-    num_hours = 36
-
-    start = date_of_interest
-    end = date_of_interest + datetime.timedelta(hours=num_hours)
-
-    file_range = manager.get_range(start, end)
-    print("Num elements:", len(file_range))
-
-    group_angles(closest)
-    # klnx also
+    filename = manager.get_closest(target_dt)
+    return filename
 
 
+def main():
 
+    radar_id = "kcbw"
+    config = bugtracker.config.load("./bugtracker.json")
+    date_of_interest = datetime.datetime(2019,7,1,12)
+
+    output_folder = "/storage/spruce/plot_output/alignment"
+    plotter = AlignmentPlotter(output_folder)
+
+    radar_ids = ["kcbw", "klnx", "ksfx"]
+
+    for radar_id in radar_ids:
+        filename = get_closest(config, radar_id, date_of_interest)
+        radar_handle = pyart.io.read(filename)
+        plotter.set_data(radar_handle, radar_id)
+        plotter.save_plot()
 
 
 main()

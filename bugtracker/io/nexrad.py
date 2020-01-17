@@ -118,16 +118,25 @@ class NexradManager:
         return range_list
 
 
-    def extract_metadata(nexrad_file):
+    def extract_metadata(self, nexrad_file):
 
         metadata = bugtracker.core.metadata()
         return metadata
 
 
-    def extract_grid_info(nexrad_file):
+    def extract_precip_grid(self, nexrad_file):
 
-        grid_info = bugtracker.core.grid_info()
-        return grid_info
+        precip_grid = bugtracker.core.grid_info()
+
+        return precip_grid
+
+
+    def extract_product_grid(self, nexrad_file):
+
+        product_grid = bugtracker.core.grid_info()
+
+        return product_grid
+
 
 
 class NexradData:
@@ -149,4 +158,7 @@ class NexradData:
         the scans between 1990 and 2020? When/where does it shift?
         """
 
+        #low_res_grid = 
+
+        #pass
         pass
