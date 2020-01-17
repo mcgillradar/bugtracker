@@ -115,13 +115,19 @@ def main():
     output_folder = "/storage/spruce/plot_output/alignment"
     plotter = AlignmentPlotter(output_folder)
 
-    radar_ids = ["kcbw", "klnx", "ksfx"]
+    radar_id = "kcbw"
 
-    for radar_id in radar_ids:
-        filename = get_closest(config, radar_id, date_of_interest)
+    start = date_of_interest
+    end = date_of_interest + datetime.timedelta(hours=6)
+    manager = bugtracker.io.nexrad.NexradManager(config, radar_id)
+    file_list = manager.get_range(start, end)
+
+    for filename in file_list:
+        print(f"Plotting {filename}")
         radar_handle = pyart.io.read(filename)
+        scan_dt = manager.datetime_from_file(filename)
         plotter.set_data(radar_handle, radar_id)
-        plotter.save_plot()
+        plotter.save_plot(scan_dt)
 
 
 main()

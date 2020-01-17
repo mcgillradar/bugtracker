@@ -23,6 +23,7 @@ radar in question.
 """
 
 import os
+import datetime
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -59,7 +60,7 @@ class AlignmentPlotter():
         self.radar_id = radar_id
 
 
-    def save_plot(self):
+    def save_plot(self, scan_dt):
 
         fig, ax1 = plt.subplots()
         ax1_color = 'tab:red'
@@ -76,9 +77,10 @@ class AlignmentPlotter():
 
 
         plt.legend()
-        plt.title(f"Scan Alignment: {self.radar_id.upper()}")
+        timestamp = scan_dt.strftime("%Y%m%d_%H%M%S")
+        plt.title(f"Scan Alignment: {self.radar_id.upper()}, {timestamp}")
 
-        output_base = self.radar_id + ".png"
+        output_base = self.radar_id + timestamp + ".png"
         output_file = os.path.join(self.output_folder, output_base)
 
         plt.savefig(output_file, dpi=200)

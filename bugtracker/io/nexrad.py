@@ -158,7 +158,7 @@ class NexradData:
         the scans between 1990 and 2020? When/where does it shift?
         """
 
-        #low_res_grid = 
+        #low_res_grid (just for precip filtering) 
+        #high res grid
 
-        #pass
         pass
