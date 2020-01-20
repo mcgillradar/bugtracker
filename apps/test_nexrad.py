@@ -106,7 +106,7 @@ def get_closest(config, radar_id, target_dt):
     return filename
 
 
-def main():
+def plot_all():
 
     radar_id = "kcbw"
     config = bugtracker.config.load("./bugtracker.json")
@@ -115,7 +115,6 @@ def main():
     output_folder = "/storage/spruce/plot_output/alignment"
     plotter = AlignmentPlotter(output_folder)
 
-    radar_id = "kcbw"
 
     start = date_of_interest
     end = date_of_interest + datetime.timedelta(hours=6)
@@ -128,6 +127,25 @@ def main():
         scan_dt = manager.datetime_from_file(filename)
         plotter.set_data(radar_handle, radar_id)
         plotter.save_plot(scan_dt)
+
+
+def show_sample_fields():
+    radar_id = "kcbw"
+    config = bugtracker.config.load("./bugtracker.json")
+    date_of_interest = datetime.datetime(2019,7,1,12)
+
+    output_folder = "/storage/spruce/plot_output/alignment"
+    manager = bugtracker.io.nexrad.NexradManager(config, radar_id)
+    radar_file = manager.get_closest(date_of_interest)
+    radar = pyart.io.read(radar_file)
+
+    print_fields(radar)
+
+
+
+def main():
+
+    show_sample_fields()
 
 
 main()

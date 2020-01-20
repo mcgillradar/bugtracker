@@ -20,6 +20,8 @@ import os
 import glob
 import datetime
 
+import bugtracker.core.utils
+
 
 class NexradManager:
     """
@@ -33,6 +35,20 @@ class NexradManager:
         self.config = config
         self.radar_id = radar_id.lower()
         self.nexrad_dir = self.config['input_dirs']['nexrad']
+
+        # Initialize radar parameters to None
+        self.metadata = None
+        self.product_grid = None
+        self.precip_grid = None
+
+
+    def __str__(self):
+        rep = "NexradManager\n"
+
+        rep += f"Radar: {self.radar_id}\n"
+        rep += f"NEXRAD directory: {self.nexrad_dir}"
+
+        return rep
 
 
     def datetime_from_file(self, filepath):
@@ -118,30 +134,47 @@ class NexradManager:
         return range_list
 
 
-    def extract_metadata(self, nexrad_file):
+    def extract_metadata(self):
+
+        radar_name = radar.metadata['instrument_name']
+
+        # Do a lowercase comparison
 
         metadata = bugtracker.core.metadata()
         return metadata
 
 
-    def extract_precip_grid(self, nexrad_file):
+    def extract_precip_grid(self):
 
         precip_grid = bugtracker.core.grid_info()
 
         return precip_grid
 
 
-    def extract_product_grid(self, nexrad_file):
+    def extract_product_grid(self):
 
         product_grid = bugtracker.core.grid_info()
 
         return product_grid
 
 
+    def build_template(self, template_file):
+        """
+        We set a template file which "fixes" the grid orientation.
+        Every subsequent scan is checked for consistency with this
+        original set of dimensions. This allows us to detect when the
+        scan strategy has changed.
+        """
+
+        self.template = pyart.io.read(template_file)
+        self.extract_metadata()
+        self.extract_precip_grid()
+        self.extract_product_grid()
+
 
 class NexradData:
 
-    def __init__(self, nexrad_file, metadata, grid_info):
+    def __init__(self, nexrad_file, metadata, product_grid, precip_grid):
         
         """
         Should be some grid verification checks
@@ -161,4 +194,40 @@ class NexradData:
         #low_res_grid (just for precip filtering) 
         #high res grid
 
-        pass
+        # NEXRAD pyart handle
+        self.handle = pyart.io.read(nexrad_file)
+        self.metadata = metadata
+        self.product_grid = product_grid
+        self.precip_grid = precip_grid
+
+        self.check_consistency()
+
+
+    def check_field_dims(self, field_name):
+
+        if field_name not in self.handle.fields:
+            raise KeyError(f"Missing field {field_name}")
+
+
+    def check_consistency(self)
+        
+        template_msg = "\nYou may need to call the method 'build_template()' from the NexradManager"
+
+        # Check that all data grids initialized
+
+        if self.metadata is None:
+            raise ValueError(f"metadata not initialized {template_msg}")
+
+        if self.product_grid is None:
+            raise ValueError(f"product_grid not initialized {template_msg}")
+
+        if self.precip_grid is None:
+            raise ValueError(f"precip_grid not initialized {template_msg}")
+
+        # check field dimensions
+
+        self.check_field_dims("differential_reflectivity")
+        self.check_field_dims("spectrum_width")
+        self.check_field_dims("differential_phase")
+        self.check_field_dims("cross_correlation_ratio")
+        self.check_field_dims("velocity")

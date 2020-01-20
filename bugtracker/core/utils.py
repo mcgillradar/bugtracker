@@ -159,3 +159,10 @@ def iris_scan_stats(radar_file, label):
         field_dims = radar.fields[key]['data'].shape
         print(f"Field: {key} - dims: {field_dims}")
 
+
+def lower_compare(str1, str2):
+
+    str1 = str1.trim().lower()
+    str2 = str2.trim().lower()
+
+    return str1 == str2
