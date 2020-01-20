@@ -20,6 +20,8 @@ import os
 import glob
 import datetime
 
+import pyart
+
 import bugtracker.core.utils
 
 
@@ -134,26 +136,74 @@ class NexradManager:
         return range_list
 
 
-    def extract_metadata(self):
+    def extract_metadata(self, nexrad_file):
+        """
+        This method extracts metadata from any nexrad_file
+        """
 
-        radar_name = radar.metadata['instrument_name']
+        nexrad_handle = pyart.io.read(nexrad_file)
+
+        radar_name = nexrad_handle.metadata['instrument_name']
 
         # Do a lowercase comparison
+        if not bugtracker.core.utils.lower_compare(radar_name, self.radar_id):
+            raise ValueError(f"Radar ID does not match: {radar_name}, {self.radar_id}")
 
-        metadata = bugtracker.core.metadata()
+        radar_id = self.radar_id
+
+        latitude = nexrad_handle.latitude['data'][0]
+        longitude = nexrad_handle.longitude['data'][0]
+
+        abs_lat = abs(latitude)
+        abs_lon = abs(longitude)
+
+        if abs_lat > 180.0:
+            raise ValueError(f"Invalid latitude: {latitude}")
+
+        if abs_lon > 360.0:
+            raise ValueError(f"Invalid longitude: {longitude}")
+
+        datestamp = nexrad_handle.time['units'].split(' ')[-1]
+        scan_dt = datetime.datetime.strptime(datestamp, "%Y-%m-%dT%H:%M:%SZ")
+
+        metadata = bugtracker.core.metadata.Metadata(radar_id, scan_dt, latitude, longitude, radar_name)
         return metadata
 
 
-    def extract_precip_grid(self):
+    def extract_precip_grid(self, nexrad_file):
 
-        precip_grid = bugtracker.core.grid_info()
+        nexrad_handle = pyart.io.read(nexrad_file)
+
+        gates = 1832
+        azims = 720
+
+        azim_step = 0.5
+        azim_offset = 0.25
+
+        gate_step = nexrad_handle.range['meters_to_center_of_first_gate']
+        gate_offset = nexrad_handle.range['meters_between_gates']
+
+        precip_grid = bugtracker.core.grid.GridInfo(gates, azims, gate_step, azim_step,
+                                                    azim_offset=azim_offset, gate_offset=gate_offset)
 
         return precip_grid
 
 
-    def extract_product_grid(self):
+    def extract_product_grid(self, nexrad_file):
 
-        product_grid = bugtracker.core.grid_info()
+        nexrad_handle = pyart.io.read(nexrad_file)
+
+        gates = 1832
+        azims = 720
+
+        azim_step = 1.0
+        azim_offset = 0.5
+
+        gate_step = nexrad_handle.range['meters_to_center_of_first_gate']
+        gate_offset = nexrad_handle.range['meters_between_gates']
+
+        product_grid = bugtracker.core.grid.GridInfo(gates, azims, gate_step, azim_step,
+                                                     azim_offset=azim_offset, gate_offset=gate_offset)
 
         return product_grid
 
@@ -166,10 +216,18 @@ class NexradManager:
         scan strategy has changed.
         """
 
-        self.template = pyart.io.read(template_file)
-        self.extract_metadata()
-        self.extract_precip_grid()
-        self.extract_product_grid()
+        if not os.path.isfile(template_file):
+            raise FileNotFoundError(template_file)
+
+        self.metadata = self.extract_metadata(template_file)
+        self.precip_grid = self.extract_precip_grid(template_file)
+        self.product_grid = self.extract_product_grid(template_file)
+
+
+    def extract_data(self, nexrad_file):
+
+        nexrad_data = NexradData(nexrad_file, self.metadata, self.product_grid, self.precip_grid)
+        return nexrad_data
 
 
 class NexradData:
@@ -208,8 +266,22 @@ class NexradData:
         if field_name not in self.handle.fields:
             raise KeyError(f"Missing field {field_name}")
 
+        # Can't reliably check azims, because they are 
+        # bundled into the vertical direction.
 
-    def check_consistency(self)
+        field_dims = self.handle.fields[field_name]['data'].shape
+
+        if len(field_dims) != 2:
+            raise ValueError(f"Invalid field_dims: {field_dims}")
+
+        if self.product_grid.gates != field_dims[1]:
+            raise ValueError("Invalid gate number")
+
+        if self.precip_grid.gates != field_dims[1]:
+            raise ValueError("Invalid gate number")
+
+
+    def check_consistency(self):
         
         template_msg = "\nYou may need to call the method 'build_template()' from the NexradManager"
 

@@ -27,6 +27,8 @@ class GridInfo():
 
     def __init__(self, gates, azims, gate_step, azim_step, azim_offset=0.0, gate_offset=0.0):
 
+        # Azims are in degrees, and gate units are in meters.
+
         self.gates = gates
         self.azims = azims
         self.gate_step = gate_step

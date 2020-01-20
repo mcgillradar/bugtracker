@@ -145,7 +145,20 @@ def show_sample_fields():
 
 def main():
 
-    show_sample_fields()
+    radar_id = "kcbw"
+    config = bugtracker.config.load("./bugtracker.json")
+
+    template_date = datetime.datetime(2019,7,1,0)
+    data_date = datetime.datetime(2019,7,1,12)
+
+    manager = bugtracker.io.nexrad.NexradManager(config, radar_id)
+
+    template_file = manager.get_closest(template_date)
+    data_file = manager.get_closest(data_date)
+
+    manager.build_template(template_file)
+    nex_data = manager.extract_data(data_file)
+    print(nex_data)
 
 
 main()
