@@ -170,7 +170,7 @@ class NexradManager:
         return metadata
 
 
-    def extract_precip_grid(self, nexrad_file):
+    def extract_grid(self, nexrad_file):
 
         nexrad_handle = pyart.io.read(nexrad_file)
 
@@ -183,29 +183,10 @@ class NexradManager:
         gate_step = nexrad_handle.range['meters_to_center_of_first_gate']
         gate_offset = nexrad_handle.range['meters_between_gates']
 
-        precip_grid = bugtracker.core.grid.GridInfo(gates, azims, gate_step, azim_step,
-                                                    azim_offset=azim_offset, gate_offset=gate_offset)
+        grid_info = bugtracker.core.grid.GridInfo(gates, azims, gate_step, azim_step,
+                                                  azim_offset=azim_offset, gate_offset=gate_offset)
 
-        return precip_grid
-
-
-    def extract_product_grid(self, nexrad_file):
-
-        nexrad_handle = pyart.io.read(nexrad_file)
-
-        gates = 1832
-        azims = 720
-
-        azim_step = 1.0
-        azim_offset = 0.5
-
-        gate_step = nexrad_handle.range['meters_to_center_of_first_gate']
-        gate_offset = nexrad_handle.range['meters_between_gates']
-
-        product_grid = bugtracker.core.grid.GridInfo(gates, azims, gate_step, azim_step,
-                                                     azim_offset=azim_offset, gate_offset=gate_offset)
-
-        return product_grid
+        return grid_info
 
 
     def build_template(self, template_file):
@@ -220,19 +201,18 @@ class NexradManager:
             raise FileNotFoundError(template_file)
 
         self.metadata = self.extract_metadata(template_file)
-        self.precip_grid = self.extract_precip_grid(template_file)
-        self.product_grid = self.extract_product_grid(template_file)
+        self.grid_info = self.extract_grid(template_file)
 
 
     def extract_data(self, nexrad_file):
 
-        nexrad_data = NexradData(nexrad_file, self.metadata, self.product_grid, self.precip_grid)
+        nexrad_data = NexradData(nexrad_file, self.metadata, self.grid_info)
         return nexrad_data
 
 
 class NexradData:
 
-    def __init__(self, nexrad_file, metadata, product_grid, precip_grid):
+    def __init__(self, nexrad_file, metadata, grid_info):
         
         """
         Should be some grid verification checks
@@ -255,8 +235,7 @@ class NexradData:
         # NEXRAD pyart handle
         self.handle = pyart.io.read(nexrad_file)
         self.metadata = metadata
-        self.product_grid = product_grid
-        self.precip_grid = precip_grid
+        self.grid_info = grid_info
 
         self.check_consistency()
 
@@ -274,10 +253,7 @@ class NexradData:
         if len(field_dims) != 2:
             raise ValueError(f"Invalid field_dims: {field_dims}")
 
-        if self.product_grid.gates != field_dims[1]:
-            raise ValueError("Invalid gate number")
-
-        if self.precip_grid.gates != field_dims[1]:
+        if self.grid_info.gates != field_dims[1]:
             raise ValueError("Invalid gate number")
 
 
@@ -290,11 +266,8 @@ class NexradData:
         if self.metadata is None:
             raise ValueError(f"metadata not initialized {template_msg}")
 
-        if self.product_grid is None:
+        if self.grid_info is None:
             raise ValueError(f"product_grid not initialized {template_msg}")
-
-        if self.precip_grid is None:
-            raise ValueError(f"precip_grid not initialized {template_msg}")
 
         # check field dimensions
 
