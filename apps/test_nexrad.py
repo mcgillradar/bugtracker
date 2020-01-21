@@ -141,6 +141,8 @@ def show_sample_fields():
 
     print_fields(radar)
 
+    azim_shape = radar.azimuth['data'].shape
+
 
 
 def main():
@@ -159,6 +161,6 @@ def main():
     manager.build_template(template_file)
     nex_data = manager.extract_data(data_file)
     print(nex_data)
-    show_sample_fields()
+
 
 main()

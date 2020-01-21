@@ -33,8 +33,21 @@ class GridInfo():
         self.azims = azims
         self.gate_step = gate_step
         self.azim_step = azim_step
-        self.azim_offset = azim_offset
         self.gate_offset = gate_offset
+        self.azim_offset = azim_offset
+
+
+    def __str__(self):
+        rep = "GridInfo:\n"
+
+        rep += f"gates: {self.gates}\n"
+        rep += f"azims: {self.azims}\n"
+        rep += f"gate_step: {self.gate_step} m\n"
+        rep += f"azim_step: {self.azim_step} deg\n"
+        rep += f"gate_offset: {self.gate_offset} m\n"
+        rep += f"azim_offset: {self.azim_offset} deg\n"
+
+        return rep
 
 
     def get_range(self):

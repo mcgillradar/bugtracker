@@ -239,6 +239,17 @@ class NexradData:
 
         self.check_consistency()
 
+        input_dims = self.handle.fields['reflectivity']['data'].shape
+        print("Dims:", input_dims)
+
+        num_lower_levels = self.get_num_lower()
+        num_upper_levels = self.get_num_upper()
+
+        self.check_levels(num_lower_levels, num_upper_levels, input_dims)
+
+        self.fill_lower(num_lower_levels)
+        self.fill_upper(num_lower_levels, num_upper_levels)
+
 
     def check_field_dims(self, field_name):
 
@@ -276,3 +287,83 @@ class NexradData:
         self.check_field_dims("differential_phase")
         self.check_field_dims("cross_correlation_ratio")
         self.check_field_dims("velocity")
+
+
+    def check_levels(self, num_lower, num_upper, input_shape):
+        """
+        A consistency check to make sure the num_lower/num_upper
+        detection worked correctly.
+        """
+
+        if len(input_shape) != 2:
+            raise ValueError("Error: 2-dimensional array expected.")
+
+        # Note that azimuths are multiplexed, so this will
+        # be larger than grid_info.azims
+        azim_dim = input_shape[0]
+        gate_dim = input_shape[1]
+
+        azims_per_lower_scan = 360 * 2
+        azims_per_upper_scan = 360
+
+        expected_dim = num_lower * azims_per_lower_scan + num_upper * azims_per_upper_scan
+
+        if expected_dim != azim_dim:
+            raise ValueError(f"Incompatible NEXRAD dimensions: {expected_dim} != {azim_dim}")
+
+
+    def get_num_lower(self):
+
+        return 6
+
+
+    def get_num_upper(self):
+
+        return 6
+
+
+    def fill_lower_scan(self, scan_idx, azims_per_lower):
+
+        start_idx = azims_per_lower * scan_idx
+        end_idx = azims_per_lower * (scan_idx + 1)
+
+        azim_start = self.handle.azimuth['data'][start_idx]
+        azim_end = self.handle.azimuth['data'][end_idx-1]
+
+        print(f"start: {start_idx}, end_idx: {end_idx}")
+        print(f"start: {azim_start}, end: {azim_end}")
+
+
+
+    def fill_lower(self, num_lower):
+
+        """
+        This can be efficiently solved by using numpy array slicing
+        """
+
+        azims_per_lower_scan = 360 * 2
+
+        # Option to get odd or even scans
+        get_odd_scans = False
+
+        scans = []
+
+        for x in range(0, num_lower):
+            if get_odd_scans:
+                if x % 2 != 0:
+                    scans.append(x)
+            else:
+                if x % 2 == 0:
+                    scans.append(x)
+
+        for scan_idx in scans:
+            print(f"Filling in scan {scan_idx}")
+            self.fill_lower_scan(scan_idx, azims_per_lower_scan)
+
+
+    def fill_upper(self, num_lower, num_upper):
+
+        azims_per_lower_scan = 360 * 2
+        azims_per_upper_scan = 360
+
+        pass
