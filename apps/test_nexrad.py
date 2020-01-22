@@ -1,6 +1,5 @@
-
-
 import os
+import sys
 import datetime
 
 import numpy as np
@@ -8,6 +7,7 @@ import pyart
 
 import bugtracker
 from bugtracker.plots.alignment import AlignmentPlotter
+
 
 
 def find_closest_idx(angles, current_angle):
@@ -161,6 +161,7 @@ def main():
     manager.build_template(template_file)
     nex_data = manager.extract_data(data_file)
     print(nex_data)
+    show_sample_fields()
 
 
 main()

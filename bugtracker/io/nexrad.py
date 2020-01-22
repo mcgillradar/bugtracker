@@ -19,7 +19,10 @@ along with Bugtracker.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import glob
 import datetime
+import math
+import time
 
+import numpy as np
 import pyart
 
 import bugtracker.core.utils
@@ -206,7 +209,13 @@ class NexradManager:
 
     def extract_data(self, nexrad_file):
 
+        t0 = time.time()
+
         nexrad_data = NexradData(nexrad_file, self.metadata, self.grid_info)
+        
+        t1 = time.time()
+        elapsed = t1 - t0
+        print(f"Time for data extraction: {elapsed:.3f} s")
         return nexrad_data
 
 
@@ -237,6 +246,14 @@ class NexradData:
         self.metadata = metadata
         self.grid_info = grid_info
 
+        self.reflectivity = self.init_field()
+        self.spectrum_width = self.init_field()
+        self.velocity = self.init_field()
+        self.cross_correlation_ratio = self.init_field()
+
+        self.azims_per_lower = 720
+        self.azims_per_upper = 360
+
         self.check_consistency()
 
         input_dims = self.handle.fields['reflectivity']['data'].shape
@@ -249,6 +266,15 @@ class NexradData:
 
         self.fill_lower(num_lower_levels)
         self.fill_upper(num_lower_levels, num_upper_levels)
+
+
+
+    def init_field(self):
+
+        field_shape = (self.grid_info.azims, self.grid_info.gates)
+        field = np.zeros(field_shape, dtype=np.float32)
+
+        return field
 
 
     def check_field_dims(self, field_name):
@@ -282,9 +308,8 @@ class NexradData:
 
         # check field dimensions
 
-        self.check_field_dims("differential_reflectivity")
         self.check_field_dims("spectrum_width")
-        self.check_field_dims("differential_phase")
+        self.check_field_dims("reflectivity")
         self.check_field_dims("cross_correlation_ratio")
         self.check_field_dims("velocity")
 
@@ -322,10 +347,24 @@ class NexradData:
         return 6
 
 
-    def fill_lower_scan(self, scan_idx, azims_per_lower):
+    def fill_lower_field(self, field, field_key, theta):
+        """
+        Lower level wraparound slicing for a single field
+        """
 
-        start_idx = azims_per_lower * scan_idx
-        end_idx = azims_per_lower * (scan_idx + 1)
+        azims = self.grid_info.azims
+        theta_diff = azims - theta
+
+        field[theta:azims] = self.handle.fields['reflectivity']['data'][0:theta_diff]
+        self.reflectivity[0:theta] = self.handle.fields['reflectivity']['data'][theta_diff:azims]
+
+
+
+    def fill_lower_scan(self, scan_idx, new_idx):
+
+
+        start_idx = self.azims_per_lower * scan_idx
+        end_idx = self.azims_per_lower * (scan_idx + 1)
 
         azim_start = self.handle.azimuth['data'][start_idx]
         azim_end = self.handle.azimuth['data'][end_idx-1]
@@ -333,6 +372,16 @@ class NexradData:
         print(f"start: {start_idx}, end_idx: {end_idx}")
         print(f"start: {azim_start}, end: {azim_end}")
 
+        adjusted_start = azim_start - self.grid_info.azim_offset
+        float_theta = adjusted_start / self.grid_info.azim_step
+        theta = int(round(float_theta))
+
+        # Code for one field first
+
+        self.fill_lower_field(self.reflectivity, "reflectivity", theta)
+        self.fill_lower_field(self.spectrum_width, "spectrum_width", theta)
+        self.fill_lower_field(self.cross_correlation_ratio, "cross_correlation_ratio", theta)
+        self.fill_lower_field(self.velocity, "velocity", theta)
 
 
     def fill_lower(self, num_lower):
@@ -340,8 +389,6 @@ class NexradData:
         """
         This can be efficiently solved by using numpy array slicing
         """
-
-        azims_per_lower_scan = 360 * 2
 
         # Option to get odd or even scans
         get_odd_scans = False
@@ -356,14 +403,22 @@ class NexradData:
                 if x % 2 == 0:
                     scans.append(x)
 
-        for scan_idx in scans:
+
+        for new_idx in range(0, len(scans)):
+            scan_idx = scans[new_idx]
             print(f"Filling in scan {scan_idx}")
-            self.fill_lower_scan(scan_idx, azims_per_lower_scan)
+            self.fill_lower_scan(scan_idx, new_idx)
 
 
     def fill_upper(self, num_lower, num_upper):
 
-        azims_per_lower_scan = 360 * 2
-        azims_per_upper_scan = 360
+        """
+        For the upper scans, the source resolution is 360. In order
+        to get to 720, we will perform interpolation using the np.interp()
+        function.
+        """
+
+        # self.azims_per_lower
+        # self.azims_per_upper
 
         pass
