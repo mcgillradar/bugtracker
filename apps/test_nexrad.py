@@ -177,9 +177,13 @@ def main():
     bugtracker.core.utils.arr_info(lats, "lats")
     bugtracker.core.utils.arr_info(lons, "lons")
 
+    print(lats[360,:])
+    print(lons[360,:])
+
     for x in range(0, 3):
         data = nex_data.reflectivity[x,:,:]
-        plotter.set_data(data, f"dbz_{x}", data_date, manager.metadata, 150.0)
+        data2 = np.full((720,1832), 10.0, dtype=float)
+        plotter.set_data(data2, f"dbz_{x}", data_date, manager.metadata, 400.0)
         plotter.save_plot(min_value=-25.0, max_value=40)
 
 

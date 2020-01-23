@@ -42,7 +42,7 @@ class RadialPlotter():
     This class provides considerable simplication
     """
 
-    def __init__(self, lats, lons, output_folder):
+    def __init__(self, lats, lons, output_folder, grid_info):
         self.invalid = -9999.0
         self.output_folder = output_folder
 
@@ -54,6 +54,7 @@ class RadialPlotter():
 
         self.lats = lats
         self.lons = lons
+        self.grid_info = grid_info
 
 
     def _set_grid(self):
@@ -135,8 +136,8 @@ class RadialPlotter():
     def _fill_wedge(self):
         # Extending to fill in the wedge
         # TODO: Should get these parameters from param file
-        azims = 720
-        gates = 512
+        azims = self.grid_info.azims
+        gates = self.grid_info.gates
         new_shape = (azims + 1, gates)
 
         self.lats = np.ma.resize(self.lats, new_shape)

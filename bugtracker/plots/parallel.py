@@ -19,7 +19,7 @@ and maximize CPU usage.
 """
 
 
-def get_plotter(metadata, config, lats, lons, plot_type):
+def get_plotter(metadata, grid_info, config, lats, lons, plot_type):
     """
     Activate the RadialPlotter. This code may need to be significantly
     modified if we need to do parallel plotting (multi-cpu to speed up
@@ -37,15 +37,15 @@ def get_plotter(metadata, config, lats, lons, plot_type):
         os.mkdir(output_folder)
 
     if plot_type == 'target_id':
-        return TargetIdPlotter(lats, lons, output_folder)
+        return TargetIdPlotter(lats, lons, output_folder, grid_info)
     else:
-        return RadialPlotter(lats, lons, output_folder)
+        return RadialPlotter(lats, lons, output_folder, grid_info)
 
 
-def plot_worker(plot_type, metadata, config, lats, lons, dbz_idx, iris_data, id_matrix):
+def plot_worker(plot_type, metadata, grid_info, config, lats, lons, dbz_idx, iris_data, id_matrix):
 
     plot_type = plot_type.lower().strip()
-    plotter = get_plotter(metadata, config, lats, lons, plot_type)
+    plotter = get_plotter(metadata, grid_info, config, lats, lons, plot_type)
 
 
     if plot_type == 'filtered':
@@ -123,7 +123,7 @@ class ParallelPlotter:
     happen at the same time.
     """
 
-    def __init__(self, lats, lons, metadata, iris_data, id_matrix):
+    def __init__(self, lats, lons, metadata, grid_info, iris_data, id_matrix):
 
         self.config = bugtracker.config.load("./bugtracker.json")
         self.lats = lats
@@ -139,21 +139,21 @@ class ParallelPlotter:
 
         for idx in range(0, num_elevs):
             plot_type = "filtered"
-            arglist = (plot_type, metadata, self.config, lats, lons, idx, iris_data, None)
+            arglist = (plot_type, metadata, grid_info, self.config, lats, lons, idx, iris_data, None)
             args.append(arglist)
 
         for idx in range(0, num_elevs):
             plot_type = "unfiltered"
-            arglist = (plot_type, metadata, self.config, lats, lons, idx, iris_data, None)
+            arglist = (plot_type, metadata, grid_info, self.config, lats, lons, idx, iris_data, None)
             args.append(arglist)
 
         for idx in range(0, num_elevs):
             plot_type = "target_id"
-            arglist = (plot_type, metadata, self.config, lats, lons, idx, iris_data, id_matrix)
+            arglist = (plot_type, metadata, grid_info, self.config, lats, lons, idx, iris_data, id_matrix)
             args.append(arglist)
 
         # Only one vertical level here (as it's all put into one level)
-        joint_args = ("joint", metadata, self.config, lats, lons, None, iris_data, None)
+        joint_args = ("joint", metadata, grid_info, self.config, lats, lons, None, iris_data, None)
         args.append(joint_args)
 
         self.pool = mp.Pool()

@@ -39,9 +39,9 @@ from bugtracker.plots.radial import RadialPlotter
 
 class TargetIdPlotter(RadialPlotter):
 
-    def __init__(self, lats, lons, output_folder):
+    def __init__(self, lats, lons, output_folder, grid_info):
 
-        super().__init__(lats, lons, output_folder)
+        super().__init__(lats, lons, output_folder, grid_info)
 
 
     def _plot_target_id(self):

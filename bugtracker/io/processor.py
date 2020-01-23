@@ -449,7 +449,7 @@ class IrisProcessor(Processor):
 
         t6 = time.time()
 
-        plot_queue = bugtracker.plots.parallel.ParallelPlotter(self.lats, self.lons, self.metadata, iris_data, id_matrix)
+        plot_queue = bugtracker.plots.parallel.ParallelPlotter(self.lats, self.lons, self.metadata, self.grid_info, iris_data, id_matrix)
 
         t7 = time.time()
 
