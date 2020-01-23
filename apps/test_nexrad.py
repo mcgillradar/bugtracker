@@ -160,8 +160,27 @@ def main():
 
     manager.build_template(template_file)
     nex_data = manager.extract_data(data_file)
-    print(nex_data)
-    show_sample_fields()
+    
+    print(manager.metadata)
+    print(manager.grid_info)
+
+    grid_coords = bugtracker.core.utils.latlon(manager.grid_info, manager.metadata)
+
+    lats = grid_coords['lats']
+    lons = grid_coords['lons']
+
+    output_folder = "/storage/spruce/plot_output/tests"
+
+    plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, output_folder)
+
+    bugtracker.core.utils.arr_info(nex_data.reflectivity[0,:,:], "dbz")
+    bugtracker.core.utils.arr_info(lats, "lats")
+    bugtracker.core.utils.arr_info(lons, "lons")
+
+    for x in range(0, 3):
+        data = nex_data.reflectivity[x,:,:]
+        plotter.set_data(data, f"dbz_{x}", data_date, manager.metadata, 150.0)
+        plotter.save_plot(min_value=-25.0, max_value=40)
 
 
 main()

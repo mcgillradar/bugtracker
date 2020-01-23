@@ -183,8 +183,8 @@ class NexradManager:
         azim_step = 0.5
         azim_offset = 0.25
 
-        gate_step = nexrad_handle.range['meters_to_center_of_first_gate']
-        gate_offset = nexrad_handle.range['meters_between_gates']
+        gate_step = nexrad_handle.range['meters_between_gates']
+        gate_offset = nexrad_handle.range['meters_to_center_of_first_gate']
 
         grid_info = bugtracker.core.grid.GridInfo(gates, azims, gate_step, azim_step,
                                                   azim_offset=azim_offset, gate_offset=gate_offset)
