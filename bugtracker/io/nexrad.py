@@ -255,7 +255,8 @@ class NexradData:
 
         self.check_levels(num_lower_levels, num_upper_levels, input_dims)
 
-        self.fill_fields()
+        self.fill_lower(num_lower_levels)
+        self.fill_upper(num_lower_levels, num_upper_levels)
 
 
     def init_field(self):
@@ -346,14 +347,10 @@ class NexradData:
         azims = self.grid_info.azims
         gates = self.grid_info.gates
 
-        radial = np.linspace(0,gates-1,num=gates)
-        sin_wave = np.sin(radial*2*np.pi/250.0) * 25.0
+        print(f"Field_key: {field_key}, theta: {theta}, start_idx: {start_idx}, vertical_level: {vertical_level}")
 
-        bugtracker.core.utils.arr_info(sin_wave, "sin_wave")
-
-        for x in range(0, azims):
-            field[vertical_level,x,:] = sin_wave
-
+        field[vertical_level,0:(azims-theta),:] = self.handle.fields[field_key]['data'][(start_idx+theta):(start_idx+azims),:]
+        field[vertical_level,(azims-theta):azims,:] = self.handle.fields[field_key]['data'][start_idx:(start_idx+theta),:]
 
 
     def fill_lower_scan(self, scan_idx, level):
@@ -445,28 +442,5 @@ class NexradData:
         function.
         """
 
-        start_idx = num_lower * self.azims_per_lower
+        pass
 
-        for x in range(0, num_upper):
-            scan_idx = start_idx + self.azims_per_upper * x
-            self.fill_upper_scan(x, scan_idx)
-
-
-
-
-
-    def fill_fields(self):
-        print("reflectivity shape:", self.reflectivity.shape)
-
-        azims = self.grid_info.azims
-        gates = self.grid_info.gates
-
-        radial = np.linspace(0,gates-1,num=gates)
-        sin_wave = np.sin(radial*2*np.pi/250.0) * 25.0
-
-        bugtracker.core.utils.arr_info(sin_wave, "sin_wave")
-
-
-        for x in range(0, 9):
-            for y in range(0, azims):
-                self.reflectivity[x,y,:] = sin_wave 

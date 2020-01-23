@@ -159,7 +159,7 @@ def main():
     data_file = manager.get_closest(data_date)
 
     manager.build_template(template_file)
-    nex_data = manager.extract_data(data_file)
+    #nex_data = manager.extract_data(data_file)
     
     print(manager.metadata)
     print(manager.grid_info)
@@ -171,20 +171,20 @@ def main():
 
     output_folder = "/storage/spruce/plot_output/tests"
 
-    plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, output_folder)
+    plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, output_folder, manager.grid_info)
 
-    bugtracker.core.utils.arr_info(nex_data.reflectivity[0,:,:], "dbz")
-    bugtracker.core.utils.arr_info(lats, "lats")
-    bugtracker.core.utils.arr_info(lons, "lons")
 
     print(lats[360,:])
     print(lons[360,:])
 
-    for x in range(0, 3):
-        data = nex_data.reflectivity[x,:,:]
-        data2 = np.full((720,1832), 10.0, dtype=float)
-        plotter.set_data(data2, f"dbz_{x}", data_date, manager.metadata, 400.0)
-        plotter.save_plot(min_value=-25.0, max_value=40)
+    for z in range(0, 10):
+        dtime = data_date + datetime.timedelta(minutes=10*z)
+        dfile = manager.get_closest(dtime)
+        nex_data = manager.extract_data(dfile)
+        for x in range(0, 3):
+            data = nex_data.reflectivity[x,:,:]
+            plotter.set_data(data, f"dbz_{x}", dtime, manager.metadata, 400.0)
+            plotter.save_plot(min_value=-25.0, max_value=40)
 
 
 main()
