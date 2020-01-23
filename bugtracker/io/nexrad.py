@@ -224,28 +224,19 @@ class NexradData:
     def __init__(self, nexrad_file, metadata, grid_info):
         
         """
-        Should be some grid verification checks
-        A basic assumption is that scan strategy might change, but
-        file structure should not change.
+        This function takes the input file, opens it as a handle
+        in pyart. Then, it takes the multiplexed 2D arrays and converts
+        them to a series of 3D numpy arrays.
 
-        IE its fine if we go from scanning at 0.1, 0.3 and 0.5,
-        but if it somehow goes to a different number of scans altogether,
-        or the grid dimensions change, this should raise an exception.
+        One important step in this process is reverting the azimuth
+        offsets that are present in the original 2D array.
         """
 
-        """
-        Actually this assumption should be tested. How can we compare
-        the scans between 1990 and 2020? When/where does it shift?
-        """
-
-        #low_res_grid (just for precip filtering) 
-        #high res grid
-
-        # NEXRAD pyart handle
         self.handle = pyart.io.read(nexrad_file)
         self.metadata = metadata
         self.grid_info = grid_info
 
+        # Initializing normalized 3D fields
         self.reflectivity = self.init_field()
         self.spectrum_width = self.init_field()
         self.velocity = self.init_field()
@@ -265,13 +256,23 @@ class NexradData:
         self.check_levels(num_lower_levels, num_upper_levels, input_dims)
 
         self.fill_lower(num_lower_levels)
-        self.fill_upper(num_lower_levels, num_upper_levels)
+        #self.fill_upper(num_lower_levels, num_upper_levels)
+
+        #bugtracker.core.utils.arr_info(self.reflectivity, "reflectivity")
+        #bugtracker.core.utils.arr_info(self.spectrum_width, "spectrum_width")
+        #bugtracker.core.utils.arr_info(self.velocity, "velocity")
+        #bugtracker.core.utils.arr_info(self.cross_correlation_ratio, "cross_correlation_ratio")
 
 
 
     def init_field(self):
 
-        field_shape = (self.grid_info.azims, self.grid_info.gates)
+        num_lower_levels = self.get_num_lower()
+        num_upper_levels = self.get_num_upper()
+
+        num_vertical = num_lower_levels // 2 + num_lower_levels
+
+        field_shape = (num_vertical,self.grid_info.azims, self.grid_info.gates)
         field = np.zeros(field_shape, dtype=np.float32)
 
         return field
@@ -328,10 +329,7 @@ class NexradData:
         azim_dim = input_shape[0]
         gate_dim = input_shape[1]
 
-        azims_per_lower_scan = 360 * 2
-        azims_per_upper_scan = 360
-
-        expected_dim = num_lower * azims_per_lower_scan + num_upper * azims_per_upper_scan
+        expected_dim = num_lower * self.azims_per_lower + num_upper * self.azims_per_upper
 
         if expected_dim != azim_dim:
             raise ValueError(f"Incompatible NEXRAD dimensions: {expected_dim} != {azim_dim}")
@@ -347,7 +345,7 @@ class NexradData:
         return 6
 
 
-    def fill_lower_field(self, field, field_key, theta):
+    def fill_lower_field(self, field, field_key, theta, start_idx, vertical_level):
         """
         Lower level wraparound slicing for a single field
         """
@@ -355,12 +353,11 @@ class NexradData:
         azims = self.grid_info.azims
         theta_diff = azims - theta
 
-        field[theta:azims] = self.handle.fields['reflectivity']['data'][0:theta_diff]
-        self.reflectivity[0:theta] = self.handle.fields['reflectivity']['data'][theta_diff:azims]
+        field[vertical_level,theta:azims,:] = self.handle.fields[field_key]['data'][(start_idx):(start_idx+theta_diff),:]
+        field[vertical_level,0:theta,:] = self.handle.fields[field_key]['data'][(start_idx+theta_diff):(start_idx+azims),:]
 
 
-
-    def fill_lower_scan(self, scan_idx, new_idx):
+    def fill_lower_scan(self, scan_idx, level):
 
 
         start_idx = self.azims_per_lower * scan_idx
@@ -378,10 +375,10 @@ class NexradData:
 
         # Code for one field first
 
-        self.fill_lower_field(self.reflectivity, "reflectivity", theta)
-        self.fill_lower_field(self.spectrum_width, "spectrum_width", theta)
-        self.fill_lower_field(self.cross_correlation_ratio, "cross_correlation_ratio", theta)
-        self.fill_lower_field(self.velocity, "velocity", theta)
+        self.fill_lower_field(self.reflectivity, "reflectivity", theta, start_idx, level)
+        self.fill_lower_field(self.spectrum_width, "spectrum_width", theta, start_idx, level)
+        self.fill_lower_field(self.cross_correlation_ratio, "cross_correlation_ratio", theta, start_idx, level)
+        self.fill_lower_field(self.velocity, "velocity", theta, start_idx, level)
 
 
     def fill_lower(self, num_lower):
@@ -410,6 +407,37 @@ class NexradData:
             self.fill_lower_scan(scan_idx, new_idx)
 
 
+    def fill_upper_field(self):
+
+        pass
+
+
+    def fill_upper_scan(self, scan_num, scan_start):
+
+        start_idx = self.azims_per_lower * scan_idx
+        end_idx = self.azims_per_lower * (scan_idx + 1)
+
+        azim_start = self.handle.azimuth['data'][start_idx]
+        azim_end = self.handle.azimuth['data'][end_idx-1]
+
+        print
+        print(f"start: {start_idx}, end_idx: {end_idx}")
+        print(f"start: {azim_start}, end: {azim_end}")
+
+        adjusted_start = azim_start - self.grid_info.azim_offset
+        float_theta = adjusted_start / self.grid_info.azim_step
+        theta = int(round(float_theta))
+
+        # Code for one field first
+
+        #self.fill_upper_field(self.reflectivity, "reflectivity", theta)
+        #self.fill_upper_field(self.spectrum_width, "spectrum_width", theta)
+        #self.fill_upper_field(self.cross_correlation_ratio, "cross_correlation_ratio", theta)
+        #self.fill_upper_field(self.velocity, "velocity", theta)
+
+
+
+
     def fill_upper(self, num_lower, num_upper):
 
         """
@@ -418,7 +446,8 @@ class NexradData:
         function.
         """
 
-        # self.azims_per_lower
-        # self.azims_per_upper
+        start_idx = num_lower * self.azims_per_lower
 
-        pass
+        for x in range(0, num_upper):
+            scan_idx = start_idx + self.azims_per_upper * x
+            self.fill_upper_scan(x, scan_idx)
