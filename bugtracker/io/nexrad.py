@@ -325,8 +325,8 @@ class NexradData:
 
         expected_dim = num_lower * self.azims_per_lower + num_upper * self.azims_per_upper
 
-        if expected_dim != azim_dim:
-            raise ValueError(f"Incompatible NEXRAD dimensions: {expected_dim} != {azim_dim}")
+        #if expected_dim != azim_dim:
+        #   raise ValueError(f"Incompatible NEXRAD dimensions: {expected_dim} != {azim_dim}")
 
 
     def get_num_lower(self):
@@ -341,16 +341,24 @@ class NexradData:
 
     def fill_lower_field(self, field, field_key, theta, start_idx, vertical_level):
         """
-        Lower level wraparound slicing for a single field
+        Reshuffling twisted azimuths from NEXRAD input to a regular grid
         """
 
         azims = self.grid_info.azims
         gates = self.grid_info.gates
+        diff = azims - theta
 
-        print(f"Field_key: {field_key}, theta: {theta}, start_idx: {start_idx}, vertical_level: {vertical_level}")
+        print(f"Field_key: {field_key}, theta: {theta}, start_idx: {start_idx}, vertical_level: {vertical_level}, diff: {diff}")
 
-        field[vertical_level,0:(azims-theta),:] = self.handle.fields[field_key]['data'][(start_idx+theta):(start_idx+azims),:]
-        field[vertical_level,(azims-theta):azims,:] = self.handle.fields[field_key]['data'][start_idx:(start_idx+theta),:]
+        dst_idx = theta
+        for src_idx in range(0, diff):
+            field[vertical_level,dst_idx,:] = self.handle.fields[field_key]['data'][(start_idx + src_idx),:]
+            dst_idx += 1
+
+        dst_idx = 0
+        for src_idx in range(diff, azims):
+            field[vertical_level,dst_idx,:] = self.handle.fields[field_key]['data'][(start_idx + src_idx),:]
+            dst_idx += 1
 
 
     def fill_lower_scan(self, scan_idx, level):
@@ -430,8 +438,6 @@ class NexradData:
         #self.fill_upper_field(self.spectrum_width, "spectrum_width", theta)
         #self.fill_upper_field(self.cross_correlation_ratio, "cross_correlation_ratio", theta)
         #self.fill_upper_field(self.velocity, "velocity", theta)
-
-
 
 
     def fill_upper(self, num_lower, num_upper):
