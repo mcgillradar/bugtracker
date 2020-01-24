@@ -325,8 +325,8 @@ class NexradData:
 
         expected_dim = num_lower * self.azims_per_lower + num_upper * self.azims_per_upper
 
-        #if expected_dim != azim_dim:
-        #   raise ValueError(f"Incompatible NEXRAD dimensions: {expected_dim} != {azim_dim}")
+        if expected_dim != azim_dim:
+           raise ValueError(f"Incompatible NEXRAD dimensions: {expected_dim} != {azim_dim}")
 
 
     def get_num_lower(self):
