@@ -24,6 +24,7 @@ import time
 
 import numpy as np
 import pyart
+from scipy import interpolate
 
 import bugtracker.core.utils
 
@@ -236,14 +237,14 @@ class NexradData:
         self.metadata = metadata
         self.grid_info = grid_info
 
+        self.azims_per_lower = 720
+        self.azims_per_upper = 360
+
         # Initializing normalized 3D fields
         self.reflectivity = self.init_field()
         self.spectrum_width = self.init_field()
         self.velocity = self.init_field()
         self.cross_correlation_ratio = self.init_field()
-
-        self.azims_per_lower = 720
-        self.azims_per_upper = 360
 
         self.check_consistency()
 
@@ -336,7 +337,13 @@ class NexradData:
 
     def get_num_upper(self):
 
-        return 6
+        input_dims = self.handle.fields['reflectivity']['data'].shape
+        azim_multiplex = input_dims[0]
+
+        upper_cells = azim_multiplex - self.azims_per_lower * self.get_num_lower()
+        num_upper = int(upper_cells // self.azims_per_upper)
+
+        return num_upper
 
 
     def fill_lower_field(self, field, field_key, theta, start_idx, vertical_level):
@@ -411,33 +418,72 @@ class NexradData:
             self.fill_lower_scan(scan_idx, new_idx)
 
 
-    def fill_upper_field(self):
+    def fill_upper_field(self, field, field_key, theta, start_idx, vertical_level):
+        
+        azims = self.azims_per_upper
+        gates = self.grid_info.gates
+        diff = azims - theta
+        azim_list = np.linspace(self.upper_azim_offset, self.upper_azim_offset + self.upper_azim_step * (azims-1), num=azims)
+        print("upper azims:")
+        print(azim_list)
+        print(azim_list.shape)
+        range_indices = np.linspace(0, gates-1, num=gates)
 
-        pass
+        # Low resolution, temp numpy array
+        low_res_field = np.zeros((azims,gates), dtype=np.float32)
+
+        print("Upper:")
+        print(f"Field_key: {field_key}, theta: {theta}, start_idx: {start_idx}, vertical_level: {vertical_level}, diff: {diff}")
+
+        dst_idx = theta
+        for src_idx in range(0, diff):
+            low_res_field[dst_idx,:] = self.handle.fields[field_key]['data'][(start_idx + src_idx),:]
+            dst_idx += 1
+
+        dst_idx = 0
+        for src_idx in range(diff, azims):
+            low_res_field[dst_idx,:] = self.handle.fields[field_key]['data'][(start_idx + src_idx),:]
+            dst_idx += 1
+
+        print("Low res field dims:", low_res_field.shape)
+        print(azim_list.shape)
+        print(range_indices.shape)
+        f = interpolate.interp2d(azim_list, range_indices, low_res_field, kind='cubic')
+
+        azim_new = np.linspace(self.grid_info.azim_offset, self.grid_info.azim_offset + self.grid_info.azim_step * (self.grid_info.azims-1), num=self.grid_info.azims)
+        print("azim new:")
+        print(azim_new)
+
+        interp_field = f(azim_new, range_indices)
+        print("interp field shape:", interp_field.shape)
+        field[vertical_level,:,:] = interp_field[:,:]
 
 
-    def fill_upper_scan(self, scan_num, scan_start):
+    def fill_upper_scan(self, upper_idx, new_idx, num_lower, num_upper):
+        print("Upper scan:")
 
-        start_idx = self.azims_per_lower * scan_idx
-        end_idx = self.azims_per_lower * (scan_idx + 1)
+        start_idx = self.azims_per_lower * num_lower + self.azims_per_upper * upper_idx
+        end_idx = self.azims_per_lower * num_lower + self.azims_per_upper * (upper_idx+1)
 
         azim_start = self.handle.azimuth['data'][start_idx]
         azim_end = self.handle.azimuth['data'][end_idx-1]
 
-        print
         print(f"start: {start_idx}, end_idx: {end_idx}")
         print(f"start: {azim_start}, end: {azim_end}")
 
-        adjusted_start = azim_start - self.grid_info.azim_offset
-        float_theta = adjusted_start / self.grid_info.azim_step
+        self.upper_azim_step = 1.0
+        self.upper_azim_offset = 0.5
+
+        adjusted_start = azim_start - self.upper_azim_offset
+        float_theta = adjusted_start / self.upper_azim_step
         theta = int(round(float_theta))
 
         # Code for one field first
 
-        #self.fill_upper_field(self.reflectivity, "reflectivity", theta)
-        #self.fill_upper_field(self.spectrum_width, "spectrum_width", theta)
-        #self.fill_upper_field(self.cross_correlation_ratio, "cross_correlation_ratio", theta)
-        #self.fill_upper_field(self.velocity, "velocity", theta)
+        self.fill_upper_field(self.reflectivity, "reflectivity", theta, start_idx, new_idx)
+        self.fill_upper_field(self.spectrum_width, "spectrum_width", theta, start_idx, new_idx)
+        self.fill_upper_field(self.cross_correlation_ratio, "cross_correlation_ratio", theta, start_idx, new_idx)
+        self.fill_upper_field(self.velocity, "velocity", theta, start_idx, new_idx)
 
 
     def fill_upper(self, num_lower, num_upper):
@@ -448,5 +494,9 @@ class NexradData:
         function.
         """
 
-        pass
+        new_idx = num_lower // 2
+        for upper_idx in range(0, num_upper):
+            self.fill_upper_scan(upper_idx, new_idx, num_lower, num_upper)
+            new_idx += 1
+
 

@@ -147,11 +147,11 @@ def show_sample_fields():
 
 def main():
 
-    radar_id = "kiln"
+    radar_id = "kcbw"
     config = bugtracker.config.load("./bugtracker.json")
 
-    template_date = datetime.datetime(2020,1,24,8)
-    data_date = datetime.datetime(2020,1,24,16)
+    template_date = datetime.datetime(2020,1,1,8)
+    data_date = datetime.datetime(2020,1,1,16)
 
     manager = bugtracker.io.nexrad.NexradManager(config, radar_id)
 
@@ -181,7 +181,7 @@ def main():
         dtime = data_date + datetime.timedelta(minutes=10*z)
         dfile = manager.get_closest(dtime)
         nex_data = manager.extract_data(dfile)
-        for x in range(0, 1):
+        for x in range(0, 9):
             data = nex_data.reflectivity[x,:,:]
             plotter.set_data(data, f"dbz_{x}", dtime, manager.metadata, 400.0)
             plotter.save_plot(min_value=-25.0, max_value=40)
