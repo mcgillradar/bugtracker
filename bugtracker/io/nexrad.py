@@ -445,18 +445,11 @@ class NexradData:
             low_res_field[dst_idx,:] = self.handle.fields[field_key]['data'][(start_idx + src_idx),:]
             dst_idx += 1
 
-        print("Low res field dims:", low_res_field.shape)
-        print(azim_list.shape)
-        print(range_indices.shape)
-        f = interpolate.interp2d(azim_list, range_indices, low_res_field, kind='cubic')
-
-        azim_new = np.linspace(self.grid_info.azim_offset, self.grid_info.azim_offset + self.grid_info.azim_step * (self.grid_info.azims-1), num=self.grid_info.azims)
-        print("azim new:")
-        print(azim_new)
-
-        interp_field = f(azim_new, range_indices)
-        print("interp field shape:", interp_field.shape)
-        field[vertical_level,:,:] = interp_field[:,:]
+        for x in range(360):
+            # Just doubling it for now
+            double_idx = 2 * x
+            field[vertical_level,double_idx,:] = low_res_field[x,:]
+            field[vertical_level,double_idx+1,:] = low_res_field[x,:]
 
 
     def fill_upper_scan(self, upper_idx, new_idx, num_lower, num_upper):
