@@ -445,11 +445,17 @@ class NexradData:
             low_res_field[dst_idx,:] = self.handle.fields[field_key]['data'][(start_idx + src_idx),:]
             dst_idx += 1
 
-        for x in range(360):
-            # Just doubling it for now
-            double_idx = 2 * x
-            field[vertical_level,double_idx,:] = low_res_field[x,:]
-            field[vertical_level,double_idx+1,:] = low_res_field[x,:]
+        for x_start in range(azims):
+            # Some modular arithmatic for wraparound
+            x_end = (x + 1) % azims
+            output_start = 2 * x_start
+            output_mid = output_start + 1
+
+            # Setting start first, no data manipulation required
+            field[vertical_level,output_start,:] = low_res_field[x_start,:]
+
+            # Setting midpoint, must average two arrays
+            field[vertical_level,output_mid,:] = (low_res_field[x_start,:] + low_res_field[x_end,:]) / 2.0
 
 
     def fill_upper_scan(self, upper_idx, new_idx, num_lower, num_upper):
