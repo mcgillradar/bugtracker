@@ -137,9 +137,11 @@ class Downloader():
         for key in self.missing:
             zip_file = os.path.join(self.zipped_dir, key + ".hgt.zip")
             print("Extracting:", zip_file)
-            z = zipfile.ZipFile(zip_file)
-            z.extractall(self.srtm3_dir)
-
+            try:
+                z = zipfile.ZipFile(zip_file)
+                z.extractall(self.srtm3_dir)
+            except zipfile.BadZipFile:
+                print("Error extracting zip file:", zip_file)
 
 
     def final_check(self):

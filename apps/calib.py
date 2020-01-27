@@ -130,7 +130,7 @@ def plot_calib_graphs(args, config, metadata, grid_info):
     lats = dset.variables['lats'][:,:]
     lons = dset.variables['lons'][:,:]
 
-    radial_plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, plot_subdir)
+    radial_plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, plot_subdir, grid_info)
 
     print("Plotting convol")
     for x in range(0, len(convol_angles)):
@@ -181,6 +181,8 @@ def run_iris_calib(args, config, metadata, grid_info):
 
 def run_nexrad_calib(args, config, metadata, grid_info):
 
+    calib_grid = get_srtm(metadata, grid_info)
+
     raise NotImplementedError("NEXRAD")
 
 
@@ -194,7 +196,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("timestamp", help="Data timestamp YYYYmmddHHMM")
     parser.add_argument("dtype", help="Data type (either iris, nexrad, or odim)")
-    parser.add_argument("station", help="3 letter station code")
+    parser.add_argument("station", help="Station code")
     parser.add_argument("-dt", "--data_hours", type=int, default=6)
     parser.add_argument('-d', '--debug', action='store_true', help="Debug plotting")
     parser.add_argument('-c', '--clear', action='store_true', help="Clear cache")
@@ -227,8 +229,13 @@ def main():
         grid_info = bugtracker.core.iris.iris_grid()
 
     elif dtype == 'nexrad':
-        metadata = None
-        grid_info = None
+        station_id = args.station.strip().lower()
+        manager = bugtracker.io.nexrad.NexradManager(config, station_id)
+        start_time = datetime.datetime.strptime(args.timestamp, "%Y%m%d%H%M")
+        start_file = manager.get_closest(start_time)
+
+        metadata = manager.extract_metadata(start_file)
+        grid_info = manager.extract_grid(start_file)
 
     elif dtype == 'odim':
         metadata = None
@@ -238,8 +245,13 @@ def main():
         raise ValueError(f"Invalid dtype {dtype}")
 
 
-    # Either running or plotting, depending on input args
+    if metadata is None:
+        raise ValueError("metadata cannot be None")
 
+    if grid_info is None:
+        raise ValueError("grid_info cannot be None")
+
+    # Either running or plotting, depending on input args
     if args.plot:
         plot_calib_graphs(args, config, metadata, grid_info)
     else:

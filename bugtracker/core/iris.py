@@ -70,6 +70,9 @@ class IrisData:
         convol_dims = (self.convol_scans, azims, gates)
         dopvol_dims = (self.dopvol_scans, azims, gates)
 
+        print("CONVOL_dims", convol_dims)
+        print("DOPVOL_dims", dopvol_dims)
+
         self.convol = np.ma.zeros(convol_dims, dtype=float)
         self.dopvol = np.ma.zeros(dopvol_dims, dtype=float)
 
