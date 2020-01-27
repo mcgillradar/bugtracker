@@ -23,4 +23,7 @@ def main():
 
     d = DataGrid()
 
+    my_slice = slice(0,8)
+    print(d.data[0,my_slice])
+
 main()
