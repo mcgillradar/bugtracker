@@ -205,6 +205,8 @@ def run_nexrad_calib(args, config):
     manager = bugtracker.io.nexrad.NexradManager(config, station_id)
     manager.populate(start_time)
 
+
+
     calib_grid = get_srtm(manager.metadata, manager.grid_info)
 
     calib_files = manager.get_range(start_time, end_time)
@@ -212,6 +214,16 @@ def run_nexrad_calib(args, config):
     for calib_file in calib_files:
         if not os.path.isfile(calib_file):
             raise FileNotFoundError(calib_file)
+
+    threshold = config['clutter']['coverage_threshold']
+
+    calib_controller = bugtracker.calib.calib.NexradController(args, manager.metadata, manager.grid_info)
+    calib_controller.set_grids(calib_grid)
+    calib_controller.set_calib_data(calib_files)
+    calib_controller.create_masks(threshold)
+    #calib_controller.print_masks()
+    calib_controller.save()
+    calib_controller.save_masks()
 
 
 def run_odim_calib(args, config, metadata, grid_info):

@@ -344,8 +344,21 @@ class OdimController(Controller):
 
 class NexradController(Controller):
 
-    def __init__(self, metadata, grid_info):
+    def __init__(self, args, metadata, grid_info):
 
-        super().__init__(metadata, grid_info)
-        raise NotImplementedError("NEXRAD filetype not currently supported.")
+        super().__init__(args, metadata, grid_info)
 
+
+    def set_calib_data(self, calib_files):
+
+        self.calib_files = calib_files
+
+
+    def create_masks(self, threshold):
+
+        print("Creating NEXRAD masks")
+
+
+    def save_masks(self):
+
+        print("Saving masks")
