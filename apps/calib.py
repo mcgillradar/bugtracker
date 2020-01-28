@@ -62,6 +62,11 @@ def get_srtm(metadata, grid_info):
     downloaded from US Government servers.
     """
 
+    # For the moment, I have commented out the altitude code, because
+    # we are not actually using the elevation, and I am getting some
+    # bugs from the SRTM extraction code.
+
+    """
     reader = bugtracker.calib.elevation.SRTM3Reader(metadata, grid_info)
 
     reader.get_active_cells()
@@ -84,12 +89,16 @@ def get_srtm(metadata, grid_info):
 
 
     altitude_grid = reader.load_elevation()
+    """
+
     final_grid = bugtracker.calib.calib.Grid()
     coords = bugtracker.core.utils.latlon(grid_info, metadata)
 
     final_grid.lats = coords['lats']
     final_grid.lons = coords['lons']
-    final_grid.altitude = altitude_grid
+
+    grid_dims = final_grid.lons.shape
+    final_grid.altitude = np.zeros(grid_dims, dtype=float)
 
     return final_grid
 
@@ -179,11 +188,30 @@ def run_iris_calib(args, config, metadata, grid_info):
     calib_controller.save_masks()
 
 
-def run_nexrad_calib(args, config, metadata, grid_info):
+def run_nexrad_calib(args, config):
 
-    calib_grid = get_srtm(metadata, grid_info)
+    date_format = "%Y%m%d%H%M"
 
-    raise NotImplementedError("NEXRAD")
+    # Filtering input arguments
+    station_id = args.station.strip().lower()
+    start_time = datetime.datetime.strptime(args.timestamp, date_format)
+    end_time = start_time + datetime.timedelta(hours=args.data_hours)
+
+    start_string = start_time.strftime(date_format)
+    end_string = end_time.strftime(date_format)
+    print(f"NEXRAD calibration time range {start_string}-{end_string}")
+
+    # Initializing manager class
+    manager = bugtracker.io.nexrad.NexradManager(config, station_id)
+    manager.populate(start_time)
+
+    calib_grid = get_srtm(manager.metadata, manager.grid_info)
+
+    calib_files = manager.get_range(start_time, end_time)
+
+    for calib_file in calib_files:
+        if not os.path.isfile(calib_file):
+            raise FileNotFoundError(calib_file)
 
 
 def run_odim_calib(args, config, metadata, grid_info):
@@ -219,6 +247,7 @@ def main():
     grid_info = None
 
     # Getting metadata and grid_info
+    # Note: This logic needs to be refactored for simplicity
 
     if dtype == 'iris':
         iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
@@ -229,13 +258,7 @@ def main():
         grid_info = bugtracker.core.iris.iris_grid()
 
     elif dtype == 'nexrad':
-        station_id = args.station.strip().lower()
-        manager = bugtracker.io.nexrad.NexradManager(config, station_id)
-        start_time = datetime.datetime.strptime(args.timestamp, "%Y%m%d%H%M")
-        start_file = manager.get_closest(start_time)
-
-        metadata = manager.extract_metadata(start_file)
-        grid_info = manager.extract_grid(start_file)
+        pass
 
     elif dtype == 'odim':
         metadata = None
@@ -245,12 +268,6 @@ def main():
         raise ValueError(f"Invalid dtype {dtype}")
 
 
-    if metadata is None:
-        raise ValueError("metadata cannot be None")
-
-    if grid_info is None:
-        raise ValueError("grid_info cannot be None")
-
     # Either running or plotting, depending on input args
     if args.plot:
         plot_calib_graphs(args, config, metadata, grid_info)
@@ -258,7 +275,7 @@ def main():
         if dtype == 'iris':
             run_iris_calib(args, config, metadata, grid_info)
         elif dtype == 'nexrad':
-            run_nexrad_calib(args, config, metadata, grid_info)
+            run_nexrad_calib(args, config)
         elif dtype == 'odim':
             run_odim_calib(args, config, metadata, grid_info)
         else:

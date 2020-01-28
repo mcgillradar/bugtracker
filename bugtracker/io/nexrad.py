@@ -193,13 +193,15 @@ class NexradManager:
         return grid_info
 
 
-    def build_template(self, template_file):
+    def populate(self, template_date):
         """
         We set a template file which "fixes" the grid orientation.
         Every subsequent scan is checked for consistency with this
         original set of dimensions. This allows us to detect when the
         scan strategy has changed.
         """
+
+        template_file = self.get_closest(template_date)
 
         if not os.path.isfile(template_file):
             raise FileNotFoundError(template_file)
@@ -209,6 +211,12 @@ class NexradManager:
 
 
     def extract_data(self, nexrad_file):
+
+        if self.metadata is None:
+            raise ValueError("metadata cannot be None")
+
+        if self.grid_info is None:
+            raise ValueError("grid_info cannot be None")
 
         t0 = time.time()
 
