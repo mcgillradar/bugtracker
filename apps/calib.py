@@ -217,7 +217,7 @@ def run_nexrad_calib(args, config):
 
     threshold = config['clutter']['coverage_threshold']
 
-    calib_controller = bugtracker.calib.calib.NexradController(args, manager.metadata, manager.grid_info)
+    calib_controller = bugtracker.calib.calib.NexradController(args, manager)
     calib_controller.set_grids(calib_grid)
     calib_controller.set_calib_data(calib_files)
     calib_controller.create_masks(threshold)

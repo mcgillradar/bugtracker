@@ -344,21 +344,70 @@ class OdimController(Controller):
 
 class NexradController(Controller):
 
-    def __init__(self, args, metadata, grid_info):
+    def __init__(self, args, manager):
 
-        super().__init__(args, metadata, grid_info)
+        super().__init__(args, manager.metadata, manager.grid_info)
+
+        # Using NexradManager for I/O processing
+        self.manager = manager
+
+        # Fake angles for test data
+        self.angles = np.linspace(1,9,num=0)
+        self.clutter = ClutterFilter(manager.metadata, manager.grid_info)
+
+
+    def init_angles(self, nexrad_file):
+
+        self.angles = np.linspace(1,9,num=9)
+        self.clutter.setup(self.angles)
 
 
     def set_calib_data(self, calib_files):
 
         self.calib_files = calib_files
 
+        if len(calib_files) < 1:
+            raise ValueError("Invalid number of calib files")
+
+        self.init_angles(calib_files[0])
+
 
     def create_masks(self, threshold):
 
+        # Filling with a test set of values
+        self.clutter.filter_3d.fill(4)
         print("Creating NEXRAD masks")
 
 
     def save_masks(self):
+        """
+        Geometry/clutter/dbz masks are Iris-specific
+        This could probably be refactored to avoid repeating
+        """
 
-        print("Saving masks")
+        angles = self.angles
+        num_angles = len(angles)
+
+        print("Num angles:", num_angles)
+
+        output_file = bugtracker.core.cache.calib_filepath(self.metadata, self.grid_info)
+
+        azims = self.grid_info.azims
+        gates = self.grid_info.gates
+
+        dset = nc.Dataset(output_file, mode="r+")
+        dset.createDimension("angles", num_angles)
+
+        clutter_dims = ('angles', 'azims', 'gates')
+        nc_angles = dset.createVariable("angles", float, ('angles'))
+        nc_angles[:] = angles[:]
+
+        # Unsigned integer 1 bytes, to save space.
+        # 0 corresponds to no mask, 1 corresponds to mask (Filter)
+        nc_clutter = dset.createVariable("clutter", 'u1', clutter_dims)
+
+        print("clutter shape:", self.clutter.filter_3d.shape)
+
+        nc_clutter[:,:,:] = self.clutter.filter_3d[:,:,:]
+
+        dset.close()
