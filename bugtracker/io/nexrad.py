@@ -76,7 +76,7 @@ class NexradManager:
         and return an error if the closest is more than 30mins away
         or if no input files are found.
         """
-
+        print(f"Type target_dt: {type(target_dt)}")
         current_year = target_dt.strftime("%Y")
         radar_upper = self.radar_id.upper()
         glob_string = f"{radar_upper}{current_year}*_V06"
@@ -262,10 +262,24 @@ class NexradData:
         num_lower_levels = self.get_num_lower()
         num_upper_levels = self.get_num_upper()
 
+        self.scan_angles = self.get_scan_angles(num_lower_levels, num_upper_levels)
+
+        if len(self.scan_angles) != self.reflectivity.shape[0]:
+            raise ValueError(f"Inconsistent number of scan angles: {self.scan_angles} != {self.reflectivity.shape[0]}")
+
         self.check_levels(num_lower_levels, num_upper_levels, input_dims)
 
         self.fill_lower(num_lower_levels)
         self.fill_upper(num_lower_levels, num_upper_levels)
+
+
+    def __str__(self):
+
+        rep = "NexradData:\n"
+
+        rep += f"Dimensions: {self.reflectivity.shape}"
+
+        return rep
 
 
     def init_field(self):
@@ -279,6 +293,24 @@ class NexradData:
         field = np.zeros(field_shape, dtype=np.float32)
 
         return field
+
+
+    def get_scan_angles(self, num_lower_levels, num_upper_levels):
+
+        fixed_angle = self.handle.fixed_angle['data']
+
+        scan_angles = []
+
+        for x in range(num_lower_levels):
+            # Getting even scans
+            if x % 2 == 0:
+                scan_angles.append(fixed_angle[x])
+
+        for y in range(num_upper_levels):
+            idx = num_lower_levels + y
+            scan_angles.append(fixed_angle[idx])
+
+        return scan_angles
 
 
     def check_field_dims(self, field_name):
@@ -455,7 +487,7 @@ class NexradData:
 
         for x_start in range(azims):
             # Some modular arithmatic for wraparound
-            x_end = (x + 1) % azims
+            x_end = (x_start + 1) % azims
             output_start = 2 * x_start
             output_mid = output_start + 1
 

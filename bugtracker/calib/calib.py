@@ -351,14 +351,17 @@ class NexradController(Controller):
         # Using NexradManager for I/O processing
         self.manager = manager
 
-        # Fake angles for test data
-        self.angles = np.linspace(1,9,num=0)
         self.clutter = ClutterFilter(manager.metadata, manager.grid_info)
 
 
     def init_angles(self, nexrad_file):
-
-        self.angles = np.linspace(1,9,num=9)
+        """
+        Getting the target angles for each scan level from the first
+        file in the sequence.
+        """
+        nex_data = self.manager.extract_data(nexrad_file)
+        self.angles = nex_data.scan_angles
+        print("NexradController angle init:", self.angles)
         self.clutter.setup(self.angles)
 
 

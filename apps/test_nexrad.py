@@ -144,8 +144,7 @@ def show_sample_fields():
     azim_shape = radar.azimuth['data'].shape
 
 
-
-def main():
+def test_plots():
 
     radar_id = "kcbw"
     config = bugtracker.config.load("./bugtracker.json")
@@ -187,4 +186,23 @@ def main():
             plotter.save_plot(min_value=-25.0, max_value=40)
 
 
-main()
+
+def test_levels():
+
+    radar_id = "kcbw"
+    config = bugtracker.config.load("./bugtracker.json")
+
+    template_date = datetime.datetime(2020,1,1,8)
+    data_date = datetime.datetime(2020,1,1,16)
+
+    manager = bugtracker.io.nexrad.NexradManager(config, radar_id)
+    manager.populate(template_date)
+
+    data_file = manager.get_closest(data_date)
+    nex_data = manager.extract_data(data_file)
+    scan_angles = nex_data.scan_angles
+    print("Num scan angles:", len(scan_angles))
+    print("Scan angles:", scan_angles)
+    print(nex_data.handle.fixed_angle)
+
+test_levels()

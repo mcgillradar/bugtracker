@@ -157,7 +157,15 @@ def plot_calib_graphs(args, config, metadata, grid_info):
 
 
 
-def run_iris_calib(args, config, metadata, grid_info):
+def run_iris_calib(args, config):
+
+    iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
+    iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
+    if len(iris_collection.sets) == 0:
+        raise ValueError("Invalid length")
+
+    metadata = bugtracker.core.metadata.from_iris_set(iris_collection.sets[0])
+    grid_info = bugtracker.core.iris.iris_grid()
 
     calib_grid = get_srtm(metadata, grid_info)
 
@@ -173,7 +181,7 @@ def run_iris_calib(args, config, metadata, grid_info):
     # Let's get a list of 
     iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
     print(iris_dir)
-    iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
+
     calib_sets = iris_collection.time_range(time_start, data_mins)
 
     for data_set in calib_sets:
@@ -204,8 +212,6 @@ def run_nexrad_calib(args, config):
     # Initializing manager class
     manager = bugtracker.io.nexrad.NexradManager(config, station_id)
     manager.populate(start_time)
-
-
 
     calib_grid = get_srtm(manager.metadata, manager.grid_info)
 
@@ -255,43 +261,20 @@ def main():
     cache_manager.make_folders()
     config = bugtracker.config.load("./bugtracker.json")
 
-    metadata = None
-    grid_info = None
-
-    # Getting metadata and grid_info
-    # Note: This logic needs to be refactored for simplicity
-
-    if dtype == 'iris':
-        iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
-        iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
-        if len(iris_collection.sets) == 0:
-            raise ValueError("Invalid length")
-        metadata = bugtracker.core.metadata.from_iris_set(iris_collection.sets[0])
-        grid_info = bugtracker.core.iris.iris_grid()
-
-    elif dtype == 'nexrad':
-        pass
-
-    elif dtype == 'odim':
-        metadata = None
-        grid_info = None
-
-    else:
-        raise ValueError(f"Invalid dtype {dtype}")
-
-
     # Either running or plotting, depending on input args
     if args.plot:
-        plot_calib_graphs(args, config, metadata, grid_info)
+        raise NotImplementedError("Calib plots currently unavailable.")
+        #plot_calib_graphs(args, config, metadata, grid_info)
+        # should get metadata/grid info from output file directly
+
+    if dtype == 'iris':
+        run_iris_calib(args, config)
+    elif dtype == 'nexrad':
+        run_nexrad_calib(args, config)
+    elif dtype == 'odim':
+        run_odim_calib(args, config)
     else:
-        if dtype == 'iris':
-            run_iris_calib(args, config, metadata, grid_info)
-        elif dtype == 'nexrad':
-            run_nexrad_calib(args, config)
-        elif dtype == 'odim':
-            run_odim_calib(args, config, metadata, grid_info)
-        else:
-            raise ValueError(f"Invalid dtype {dtype}")
+        raise ValueError(f"Invalid dtype {dtype}")
 
 
 main()
