@@ -464,9 +464,7 @@ class NexradData:
         gates = self.grid_info.gates
         diff = azims - theta
         azim_list = np.linspace(self.upper_azim_offset, self.upper_azim_offset + self.upper_azim_step * (azims-1), num=azims)
-        print("upper azims:")
-        print(azim_list)
-        print(azim_list.shape)
+
         range_indices = np.linspace(0, gates-1, num=gates)
 
         # Low resolution, temp numpy array

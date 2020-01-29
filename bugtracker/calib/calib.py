@@ -214,6 +214,9 @@ class IrisController(Controller):
         dopvol_above = iris_data.dopvol > dbz_threshold
         convol_above = iris_data.convol > dbz_threshold
 
+        print("DOPVOL ABOVE TYPE:", type(dopvol_above))
+        print("CONVOL ABOVE TYPE:", type(convol_above))
+
         dopvol_above = dopvol_above.filled(fill_value=False)
         convol_above = convol_above.filled(fill_value=False)
 
@@ -262,10 +265,10 @@ class IrisController(Controller):
         bugtracker.core.utils.arr_info(self.convol_clutter.filter_3d, "convol_clutter")
 
         if prev_shape_dopvol != post_shape_dopvol:
-            raise ValueError("Incompatible shapes: {prev_shape_dopvol} != {post_shape_dopvol}")
+            raise ValueError(f"Incompatible shapes: {prev_shape_dopvol} != {post_shape_dopvol}")
 
         if prev_shape_convol != post_shape_convol:
-            raise ValueError("Incompatible shapes: {prev_shape_convol} != {post_shape_convol}")
+            raise ValueError(f"Incompatible shapes: {prev_shape_convol} != {post_shape_convol}")
 
 
     def print_mask(self, label, clutter_filter):
@@ -347,7 +350,7 @@ class NexradController(Controller):
     def __init__(self, args, manager):
 
         super().__init__(args, manager.metadata, manager.grid_info)
-
+        self.config = bugtracker.config.load("./bugtracker.json")
         # Using NexradManager for I/O processing
         self.manager = manager
 
@@ -375,11 +378,61 @@ class NexradController(Controller):
         self.init_angles(calib_files[0])
 
 
-    def create_masks(self, threshold):
+    def count_instances(self, nexrad_file):
+        """
+        Takes in a Nexrad file and counts up all instances
+        above a threshold, adding to instances counters.
+        """
 
-        # Filling with a test set of values
-        self.clutter.filter_3d.fill(4)
-        print("Creating NEXRAD masks")
+        nex_data = self.manager.extract_data(nexrad_file)
+
+        dbz_threshold = self.config['clutter']['dbz_threshold']
+        clutter_dims = self.clutter.get_dims()
+
+        if nex_data.reflectivity.shape != clutter_dims:
+            raise ValueError(f"Incompatible shape: {clutter_dims}")
+
+        clutter_above = nex_data.reflectivity > dbz_threshold
+
+        self.clutter_instances = self.clutter_instances + clutter_above.astype(int)
+
+
+    def create_masks(self, threshold):
+        """
+        Creating clutter mask from NEXRAD input dataset
+        """
+
+        clutter_dims = self.clutter.get_dims()
+
+        # Counters for number of hits above threshold
+        self.clutter_instances = np.zeros(clutter_dims, dtype=int)
+
+        num_timeseries = len(self.calib_files)
+        if num_timeseries == 0:
+            raise ValueError("No files in calibration set.")
+
+        for calib_file in self.calib_files:
+            print("Calib file processing:", calib_file)
+            self.count_instances(calib_file)
+
+        # Normalization
+        self.norm_clutter = self.clutter_instances / float(num_timeseries)
+
+        bugtracker.core.utils.arr_info(self.clutter_instances, "clutter_instances")
+        bugtracker.core.utils.arr_info(self.norm_clutter, "norm_clutter")
+
+        prev_shape_clutter = self.clutter.filter_3d.shape
+
+        print("Coverage threshold:", threshold)
+
+        self.clutter.filter_3d = self.norm_clutter >= threshold
+
+        post_shape_clutter = self.clutter.filter_3d.shape
+
+        bugtracker.core.utils.arr_info(self.clutter.filter_3d, "clutter")
+
+        if prev_shape_clutter != post_shape_clutter:
+            raise ValueError(f"Incompatible shapes: {prev_shape_clutter} != {post_shape_clutter}")
 
 
     def save_masks(self):
