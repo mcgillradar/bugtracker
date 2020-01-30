@@ -107,15 +107,22 @@ def plot_calib_graph(args, metadata, radial_plotter, plot_type, angle, data):
     time_start = datetime.datetime.strptime(args.timestamp, "%Y%m%d%H%M")
     label = f"clutter_{plot_type}_{angle}_"
     max_range = 150
+    print("Plot label:", label)
+    print("data", data)
 
     radial_plotter.set_data(data, label, time_start, metadata, max_range)
     radial_plotter.save_plot(min_value=0, max_value=1)
 
 
-def plot_calib_graphs(args, config, metadata, grid_info):
-    """
-    Plot output graphs
-    """
+def plot_calib_iris(args, config):
+
+    iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
+    iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
+    if len(iris_collection.sets) == 0:
+        raise ValueError("Invalid length")
+
+    metadata = bugtracker.core.metadata.from_iris_set(iris_collection.sets[0])
+    grid_info = bugtracker.core.iris.iris_grid()
 
     nc_file = bugtracker.core.cache.calib_filepath(metadata, grid_info)
 
@@ -156,7 +163,69 @@ def plot_calib_graphs(args, config, metadata, grid_info):
     dset.close()
 
 
+def plot_calib_nexrad(args, config):
+    date_format = "%Y%m%d%H%M"
 
+    # Filtering input arguments
+    station_id = args.station.strip().lower()
+    start_time = datetime.datetime.strptime(args.timestamp, date_format)
+
+    # Initializing manager class
+    manager = bugtracker.io.nexrad.NexradManager(config, station_id)
+    manager.populate(start_time)
+
+    metadata = manager.metadata
+    grid_info = manager.grid_info
+
+    nc_file = bugtracker.core.cache.calib_filepath(metadata, grid_info)
+
+    plot_dir = config['plot_dir']
+    plot_subdir = os.path.join(plot_dir, "calib_plots")
+
+    if not os.path.isdir(plot_dir):
+        os.mkdir(plot_dir)
+
+    if not os.path.isdir(plot_subdir):
+        os.mkdir(plot_subdir)
+
+    dset = nc.Dataset(nc_file, mode='r')
+
+    clutter = dset.variables['clutter'][:,:,:]
+    clutter_angles = dset.variables['angles']
+
+    lats = dset.variables['lats'][:,:]
+    lons = dset.variables['lons'][:,:]
+
+    radial_plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, plot_subdir, grid_info)
+
+    print("Plotting clutter")
+    for x in range(0, len(clutter_angles)):
+        angle = clutter_angles[x]
+        slice_data = clutter[x,:,:]
+        plot_calib_graph(args, metadata, radial_plotter, "nexrad", angle, slice_data)
+
+    dset.close()
+
+def plot_calib_odim(args, config):
+
+    raise NotImplementedError("Odim plotting not implemented")
+
+def plot_calib_graphs(args, config):
+    """
+    Plot output graphs
+    """
+    dtype = args.dtype.lower()
+
+    if dtype == 'iris':
+        plot_calib_iris(args, config)
+    elif dtype == 'nexrad':
+        plot_calib_nexrad(args, config)
+    elif dtype == 'odim':
+        plot_calib_odim(args, config)
+    else:
+        raise ValueError(f"Invalid dtype {dtype}")
+
+  
 def run_iris_calib(args, config):
 
     iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
@@ -261,20 +330,18 @@ def main():
     cache_manager.make_folders()
     config = bugtracker.config.load("./bugtracker.json")
 
-    # Either running or plotting, depending on input args
-    if args.plot:
-        raise NotImplementedError("Calib plots currently unavailable.")
-        #plot_calib_graphs(args, config, metadata, grid_info)
-        # should get metadata/grid info from output file directly
 
-    if dtype == 'iris':
-        run_iris_calib(args, config)
-    elif dtype == 'nexrad':
-        run_nexrad_calib(args, config)
-    elif dtype == 'odim':
-        run_odim_calib(args, config)
+    if args.plot:
+        plot_calib_graphs(args, config)
     else:
-        raise ValueError(f"Invalid dtype {dtype}")
+        if dtype == 'iris':
+            run_iris_calib(args, config)
+        elif dtype == 'nexrad':
+            run_nexrad_calib(args, config)
+        elif dtype == 'odim':
+            run_odim_calib(args, config)
+        else:
+            raise ValueError(f"Invalid dtype {dtype}")
 
 
 main()

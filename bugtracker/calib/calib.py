@@ -397,6 +397,15 @@ class NexradController(Controller):
         self.clutter_instances = self.clutter_instances + clutter_above.astype(int)
 
 
+    def print_levels(self, nexrad_file):
+
+        nex_data = self.manager.extract_data(nexrad_file)
+
+        ref = nex_data.handle.fields['reflectivity']['data'].shape
+
+        print("Reflectivity shape:", ref)
+
+
     def create_masks(self, threshold):
         """
         Creating clutter mask from NEXRAD input dataset
