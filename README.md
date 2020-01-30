@@ -38,14 +38,38 @@ Configure bugtracker.json
 
 ## Developer Guide
 
-Explain a bit more in detail the architecture of the application.
+Bugtracker is a python project which tracks the migration of insects using input radar data. It works by filtering out non-meterological radar echoes.
+
+We provide support for the following Radar filetypes:
+* IRIS (old Environment Canada format)
+* ODIM_H5 (new Environment Canada format)
+* NEXRAD (US Weather Service radar format)
 
 
-import bugtracker
+Bugtracker provides a suite of command-line applications for analyzing radar data:
+
+1. nexrad_aws.py
+	This application allows automated downloading of NEXRAD data from the Amazon Web Services servers provided by the US Weather Service.
+2. calib.py
+	This calibration application must be run prior to the processing. This generates a calibration file which is specific to each radar.
+3. tracker.py
+	This is the main data processing application. It takes as input raw data files, and outputs NETCDF4 containing the filtered bug data.
 
 
-pyart
-geopy
-numpy
-cartopy
+## Design philosophy
 
+Makes heavy use of object-oriented programming in Python.
+
+1. Reusable components, inheritance
+	Processor -> IrisProcessor
+	For calibration, Controller -> IrisController
+	Filter -> ClutterFilter, PrecipFilter
+2. metadata, grid_info
+	These objects crop up throughout the code.
+
+
+
+
+
+Depenedencies: Python packages and 1 system package
+* wget
