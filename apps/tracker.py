@@ -117,7 +117,32 @@ def iris_tracker(args, config):
 
 def nexrad_tracker(args, config):
 
-    raise NotImplementedError(args.dtype)
+    date_format = "%Y%m%d%H%M"
+
+    # Filtering input arguments
+    station_id = args.station.strip().lower()
+    start_time = datetime.datetime.strptime(args.start, date_format)
+    end_time = start_time + datetime.timedelta(hours=args.data_hours)
+
+    # Initializing manager class
+    manager = bugtracker.io.nexrad.NexradManager(config, station_id)
+    manager.populate(start_time)
+
+    """
+    The NEXRAD manager uses a list of files, rather than the IrisSet
+    that is required for IRIS files. This is because it has a much simpler
+    file structure (1 file per scan)
+    """
+    nexrad_files = []
+
+    if args.data_hours == 0:
+        closest_file = manager.get_closest(start_time)
+        nexrad_files.append(closest_file)
+    else:
+        nexrad_files = manager.get_range(start_time, end_time)
+
+    processor = bugtracker.io.processor.NexradProcessor(manager.metadata, manager.grid_info)
+    processor.process_sets(nexrad_files)
 
 
 def odim_tracker(args, config):

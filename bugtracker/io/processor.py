@@ -58,6 +58,8 @@ class Processor(abc.ABC):
         
         calib_file = self.calib_file
 
+        print(f"Loading calib file: {calib_file}")
+
         dset = nc.Dataset(calib_file, mode='r')
 
         self.lats = dset.variables['lats'][:,:]
@@ -471,23 +473,43 @@ class IrisProcessor(Processor):
             self.process_set(iris_set)
 
 
-class OdimProcessor(Processor):
-    """
-    Processor for Odim H5 files (new Environment Canada format)
-    """
-
-    def __init__(self):
-
-        super().__init__()
-        raise NotImplmentedError("OdimProcessor")
-
-
 class NexradProcessor(Processor):
     """
     Processor for US Weather Service NEXRAD file format
     """
 
-    def __init__(self):
+    def __init__(self, metadata, grid_info):
 
-        super().__init__()
-        raise NotImplmentedError("NexradProcessor")
+        super().__init__(metadata, grid_info)
+        
+
+
+    def load_specific_calib(self):
+        """
+        Load the calibration file variables specific to
+        NEXRAD files.
+        """
+        pass
+
+    def verify_specific_calib(self):
+
+        pass
+
+    def process_sets(self, nexrad_files):
+
+        for nexrad_file in nexrad_files:
+            print(f"Processing NEXRAD file: {nexrad_file}")
+
+
+
+class OdimProcessor(Processor):
+    """
+    Processor for Odim H5 files (new Environment Canada format)
+    """
+
+    def __init__(self, metadata, grid_info):
+
+        super().__init__(metadata, grid_info)
+        raise NotImplementedError("OdimProcessor")
+
+
