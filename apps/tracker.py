@@ -141,7 +141,7 @@ def nexrad_tracker(args, config):
     else:
         nexrad_files = manager.get_range(start_time, end_time)
 
-    processor = bugtracker.io.processor.NexradProcessor(manager.metadata, manager.grid_info)
+    processor = bugtracker.io.processor.NexradProcessor(manager)
     processor.process_sets(nexrad_files)
 
 

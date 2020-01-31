@@ -478,10 +478,10 @@ class NexradProcessor(Processor):
     Processor for US Weather Service NEXRAD file format
     """
 
-    def __init__(self, metadata, grid_info):
+    def __init__(self, manager):
 
-        super().__init__(metadata, grid_info)
-        
+        super().__init__(manager.metadata, manager.grid_info)
+        self.manager = manager
 
 
     def load_specific_calib(self):
@@ -497,9 +497,27 @@ class NexradProcessor(Processor):
 
     def process_sets(self, nexrad_files):
 
+        radar_id = self.metadata.radar_id
+        plot_dir = self.config['plot_dir']
+        output_folder = os.path.join(plot_dir, radar_id)
+
+        plotter = bugtracker.plots.radial.RadialPlotter(self.lats, self.lons, output_folder, self.grid_info)
+
         for nexrad_file in nexrad_files:
             print(f"Processing NEXRAD file: {nexrad_file}")
+            nex_data = self.manager.extract_data(nexrad_file)
+            reflectivity = nex_data.reflectivity
+            levels = nex_data.scan_angles
+            if len(levels) != reflectivity.shape[0]:
+                raise ValueError("Incompatible output dimensions")
 
+            for x in range(0, len(levels)):
+                label = f"dbz_{levels[x]:.2f}"
+                data = reflectivity[x,:,:]
+                # Complete test data
+                plot_dt = nex_data.scan_dt
+                plotter.set_data(data, label, plot_dt, self.metadata, 150.0)
+                plotter.save_plot(min_value=-30,max_value=50)
 
 
 class OdimProcessor(Processor):

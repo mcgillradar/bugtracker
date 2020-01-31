@@ -242,6 +242,7 @@ class NexradData:
         """
 
         self.handle = pyart.io.read(nexrad_file)
+        self.scan_dt = self.get_scan_dt(nexrad_file, metadata)
         self.metadata = metadata
         self.grid_info = grid_info
 
@@ -279,6 +280,18 @@ class NexradData:
         rep += f"Dimensions: {self.reflectivity.shape}"
 
         return rep
+
+
+    def get_scan_dt(self, nexrad_file, metadata):
+        """
+        Extracting the datetime of the scan from the NEXRAD filename
+        """
+        basename = os.path.basename(nexrad_file)
+
+        radar_id = metadata.radar_id
+        date_pattern = f"{radar_id.upper()}%Y%m%d_%H%M%S_V06"
+
+        return datetime.datetime.strptime(basename, date_pattern)
 
 
     def init_field(self):
