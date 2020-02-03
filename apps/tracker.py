@@ -142,7 +142,7 @@ def nexrad_tracker(args, config):
         nexrad_files = manager.get_range(start_time, end_time)
 
     processor = bugtracker.io.processor.NexradProcessor(manager)
-    processor.process_sets(nexrad_files)
+    processor.process_files(nexrad_files)
 
 
 def odim_tracker(args, config):

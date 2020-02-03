@@ -85,6 +85,29 @@ class Processor(abc.ABC):
             raise ValueError(f"Altitude grid invalid dims: {self.altitude.shape}")
 
 
+    def output_filename(self, scan_dt):
+        """
+        TODO: This should specialize to different folders based on
+        metadata.radar_id
+        """
+
+        output_folder = self.config['netcdf_dir']
+
+        if not os.path.isdir(output_folder):
+            raise FileNotFoundError(output_folder)
+
+        radar_id = self.metadata.radar_id
+        subfolder = os.path.join(output_folder, radar_id)
+
+        if not os.path.isdir(subfolder):
+            os.mkdir(subfolder)
+
+        pattern = "dbz_%Y%m%d%H%M.nc"
+        output_filename = scan_dt.strftime(pattern)
+
+        return os.path.join(subfolder, output_filename)
+
+
     @abc.abstractmethod
     def load_specific_calib(self):
         """
@@ -316,19 +339,6 @@ class IrisProcessor(Processor):
         print("Total time for precip filter:", t1 - t0)
 
 
-    def output_filename(self, scan_dt):
-        
-        output_folder = self.config['netcdf_dir']
-
-        if not os.path.isdir(output_folder):
-            raise FileNotFoundError(output_folder)
-
-        pattern = "dbz_%Y%m%d%H%M.nc"
-        output_filename = scan_dt.strftime(pattern)
-
-        return os.path.join(output_folder, output_filename)
-
-
     def set_joint_product(self, iris_data):
         """
         Collapsing 3D dbz product into a 2D flat grid.
@@ -482,6 +492,8 @@ class NexradProcessor(Processor):
 
         super().__init__(manager.metadata, manager.grid_info)
         self.manager = manager
+        self.load_specific_calib()
+        self.verify_specific_calib()
 
 
     def load_specific_calib(self):
@@ -489,35 +501,123 @@ class NexradProcessor(Processor):
         Load the calibration file variables specific to
         NEXRAD files.
         """
-        pass
+
+        calib_file = self.calib_file
+        dset = nc.Dataset(calib_file, mode='r')
+
+        self.angles = dset.variables['angles'][:]
+        self.clutter = dset.variables['clutter'][:,:,:]
+
+        dset.close()
+
 
     def verify_specific_calib(self):
+        
+        num_angles = len(self.angles)
 
-        pass
+        if num_angles <= 1:
+            raise ValueError("Not enough angles in calib")
 
-    def process_sets(self, nexrad_files):
+        azims = self.grid_info.azims
+        gates = self.grid_info.gates
 
-        radar_id = self.metadata.radar_id
-        plot_dir = self.config['plot_dir']
-        output_folder = os.path.join(plot_dir, radar_id)
+        calib_dim = (num_angles, azims, gates)
 
-        plotter = bugtracker.plots.radial.RadialPlotter(self.lats, self.lons, output_folder, self.grid_info)
+        if self.clutter.shape != calib_dim:
+            raise ValueError(f"Invalid calib dimensions: {self.clutter.shape}")
+
+
+    def filter_precip(self, precip_filter):
+        print("Filtering precip")
+
+
+    def impose_filter(self, nexrad_data, filter_joint):
+        """
+        Applying joint filter for nexrad data. Here 'raw' simply
+        indicates before any processing has occured.
+        """
+
+        raw_dbz_shape = nexrad_data.reflectivity.shape
+        raw_dbz_mask = np.ma.getmask(nexrad_data.reflectivity)
+        filter_mask = np.ma.mask_or(filter_joint, raw_dbz_mask)
+
+        nexrad_data.reflectivity = np.ma.array(nexrad_data.reflectivity, mask=filter_mask)
+
+        filtered_dbz_shape = nexrad_data.reflectivity.shape
+
+        if raw_dbz_shape != filtered_dbz_shape:
+            raise ValueError("Error in dbz array size")
+
+
+    def set_joint_product(self, nexrad_data):
+
+        print("Setting joint product...")
+
+
+    def process_file(self, nexrad_file):
+
+        print("Processing file:", nexrad_file)
+
+        t0 = time.time()
+
+        nexrad_data = self.manager.extract_data(nexrad_file)
+
+        
+        t1 = time.time()
+
+        # construct the PrecipFilter from iris_set
+        precip = PrecipFilter(self.metadata, self.grid_info, nexrad_data.scan_angles)
+        self.filter_precip(precip)
+
+        t2 = time.time()
+
+        # Combining ClutterFilter with PrecipFilter
+
+        clutter_bool = self.clutter.astype(bool)
+        filter_joint = np.logical_or(clutter_bool, precip.filter_3d)
+
+        t3 = time.time()
+
+        # modify the files based on filters
+        self.impose_filter(nexrad_data, filter_joint)
+
+        nexrad_datetime = self.manager.datetime_from_file(nexrad_file)
+        nc_filename = self.output_filename(nexrad_datetime)
+
+        self.set_joint_product(nexrad_data)
+
+        nexrad_output = bugtracker.io.models.NexradOutput(self.metadata, self.grid_info)
+        nexrad_output.populate(nexrad_data)
+        nexrad_output.validate()
+        nexrad_output.write(nc_filename)
+
+        t4 = time.time()
+
+        precip_bool = precip.filter_3d.astype(bool)
+
+        target_id = bugtracker.core.target_id.TargetId(nexrad_data.reflectivity, clutter_bool, precip_bool)
+        id_matrix = target_id.export_matrix()
+
+        nexrad_output.append_target_id(nc_filename, id_matrix)
+
+        t5 = time.time()
+
+        #plot_queue = bugtracker.plots.parallel.ParallelPlotter(self.lats, self.lons, self.metadata, self.grid_info, iris_data, id_matrix)
+
+        t6 = time.time()
+
+        print(f"Fill grids, construct data: {(t1-t0):.3f} s")
+        print(f"Precip filter: {(t2-t1):.3f} s")
+        print(f"Combining filters: {(t3-t2):.3f} s")
+        print(f"Output product NETCDF4 {(t4-t3):.3f} s")
+        print(f"Target ID setup and export {(t5-t4):.3f} s")
+        print(f"Plotting radial graphs {(t6-t5):.3f} s")
+
+
+    def process_files(self, nexrad_files):
 
         for nexrad_file in nexrad_files:
-            print(f"Processing NEXRAD file: {nexrad_file}")
-            nex_data = self.manager.extract_data(nexrad_file)
-            reflectivity = nex_data.reflectivity
-            levels = nex_data.scan_angles
-            if len(levels) != reflectivity.shape[0]:
-                raise ValueError("Incompatible output dimensions")
-
-            for x in range(0, len(levels)):
-                label = f"dbz_{levels[x]:.2f}"
-                data = reflectivity[x,:,:]
-                # Complete test data
-                plot_dt = nex_data.scan_dt
-                plotter.set_data(data, label, plot_dt, self.metadata, 150.0)
-                plotter.save_plot(min_value=-30,max_value=50)
+            self.process_file(nexrad_file)
 
 
 class OdimProcessor(Processor):

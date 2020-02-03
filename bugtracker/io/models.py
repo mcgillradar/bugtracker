@@ -220,4 +220,52 @@ class NexradOutput(BaseOutput):
 
     def __init__(self, metadata, grid_info):
 
-        raise NotImplementedError("NEXRAD")
+        super().__init__(metadata, grid_info, "nexrad")
+
+        pass
+
+
+    def populate(self, nexrad_data):
+        """
+        TODO: Keep filtered separate
+        """
+
+        output_shape = nexrad_data.reflectivity.shape
+        flattened_shape = (self.grid_info.azims, self.grid_info.gates)
+
+        self.dbz_filtered = np.zeros(output_shape, dtype=float)
+        self.dbz_unfiltered = np.zeros(output_shape, dtype=float)
+        self.joint_product = np.zeros(flattened_shape, dtype=float)
+
+        self.dbz_elevs = nexrad_data.scan_angles
+        #self.dop_elevs = iris_data.dopvol_elevs
+
+        #self.velocity = iris_data.velocity
+        #self.spectrum_width = iris_data.spectrum_width
+        #self.total_power = iris_data.total_power
+
+
+    def validate(self):
+
+        super().validate()
+
+        pass
+
+
+    def write(self, filename):
+        """
+        Appends. File is created in super class.
+
+        Imporant to ensure file is not corrupted before
+        saving to netCDF4. If you are doing batch processing
+        of netCDF4, you may want to include a try/except block
+        to handle ValueError.
+        """
+
+        self.validate()
+
+        super().write(filename)
+
+        dset = nc.Dataset(filename, mode="a")
+        
+        dset.close()

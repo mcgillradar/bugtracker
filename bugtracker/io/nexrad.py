@@ -296,6 +296,11 @@ class NexradData:
 
     def init_field(self):
 
+        """
+        This fields should probably be np.ma masked arrays, to 
+        be consistent with the convention chosen for IRIS data
+        """
+
         num_lower_levels = self.get_num_lower()
         num_upper_levels = self.get_num_upper()
 
