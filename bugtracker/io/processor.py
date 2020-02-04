@@ -124,6 +124,10 @@ class Processor(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def impose_filter(self):
+        pass
+
 
 class IrisProcessor(Processor):
 
