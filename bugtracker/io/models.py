@@ -244,7 +244,7 @@ class NexradOutput(BaseOutput):
         self.dbz_filtered = nexrad_data.dbz_filtered[0:max_scans,:,:]
         self.dbz_unfiltered = nexrad_data.dbz_unfiltered[0:max_scans,:,:]
         self.joint_product = nexrad_data.joint_product[:,:]
-        self.dbz_elevs = nexrad_data.scan_angles[0:max_scans]
+        self.dbz_elevs = nexrad_data.dbz_elevs[0:max_scans]
 
         self.spectrum_width = nexrad_data.spectrum_width[0:max_scans,:,:]
         self.velocity = nexrad_data.velocity[0:max_scans,:,:]

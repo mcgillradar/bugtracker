@@ -477,7 +477,7 @@ class NexradProcessor(Processor):
         t1 = time.time()
 
         # construct the PrecipFilter from iris_set
-        precip = PrecipFilter(self.metadata, self.grid_info, nexrad_data.scan_angles)
+        precip = PrecipFilter(self.metadata, self.grid_info, nexrad_data.dbz_elevs)
         precip.apply(nexrad_data.dbz_unfiltered, self.clutter, self.angles)
 
         t2 = time.time()
@@ -511,13 +511,13 @@ class NexradProcessor(Processor):
 
         # Taking only desired levels
         max_scans = self.config['nexrad_settings']['vertical_scans']
-        id_matrix = id_matrix[0:max_scans,:,:]
+        reduced_id_matrix = id_matrix[0:max_scans,:,:]
 
-        nexrad_output.append_target_id(nc_filename, id_matrix)
+        nexrad_output.append_target_id(nc_filename, reduced_id_matrix)
 
         t5 = time.time()
 
-        #plot_queue = bugtracker.plots.parallel.ParallelPlotter(self.lats, self.lons, self.metadata, self.grid_info, iris_data, id_matrix)
+        plot_queue = bugtracker.plots.parallel.ParallelPlotter(self.lats, self.lons, self.metadata, self.grid_info, nexrad_data, id_matrix)
 
         t6 = time.time()
 

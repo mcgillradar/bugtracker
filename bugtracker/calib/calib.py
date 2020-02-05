@@ -363,7 +363,7 @@ class NexradController(Controller):
         file in the sequence.
         """
         nex_data = self.manager.extract_data(nexrad_file)
-        self.angles = nex_data.scan_angles
+        self.angles = nex_data.dbz_elevs
         print("NexradController angle init:", self.angles)
         self.clutter.setup(self.angles)
 

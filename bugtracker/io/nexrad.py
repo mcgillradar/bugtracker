@@ -242,7 +242,7 @@ class NexradData:
         """
 
         self.handle = pyart.io.read(nexrad_file)
-        self.scan_dt = self.get_scan_dt(nexrad_file, metadata)
+        self.datetime = self.get_scan_dt(nexrad_file, metadata)
         self.metadata = metadata
         self.grid_info = grid_info
 
@@ -262,10 +262,10 @@ class NexradData:
         num_lower_levels = self.get_num_lower()
         num_upper_levels = self.get_num_upper()
 
-        self.scan_angles = self.get_scan_angles(num_lower_levels, num_upper_levels)
+        self.dbz_elevs = self.get_scan_angles(num_lower_levels, num_upper_levels)
 
-        if len(self.scan_angles) != self.dbz_unfiltered.shape[0]:
-            raise ValueError(f"Inconsistent number of scan angles: {self.scan_angles} != {self.reflectivity.shape[0]}")
+        if len(self.dbz_elevs) != self.dbz_unfiltered.shape[0]:
+            raise ValueError(f"Inconsistent number of scan angles: {self.dbz_elevs} != {self.reflectivity.shape[0]}")
 
         self.check_levels(num_lower_levels, num_upper_levels, input_dims)
 
