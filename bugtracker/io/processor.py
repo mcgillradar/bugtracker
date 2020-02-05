@@ -509,6 +509,10 @@ class NexradProcessor(Processor):
         target_id = bugtracker.core.target_id.TargetId(nexrad_data.reflectivity, clutter_bool, precip_bool)
         id_matrix = target_id.export_matrix()
 
+        # Taking only desired levels
+        max_scans = self.config['nexrad_settings']['vertical_scans']
+        id_matrix = id_matrix[0:max_scans,:,:]
+
         nexrad_output.append_target_id(nc_filename, id_matrix)
 
         t5 = time.time()

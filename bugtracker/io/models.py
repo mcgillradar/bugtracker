@@ -20,11 +20,13 @@ import abc
 import numpy as np
 import netCDF4 as nc
 
+import bugtracker.config
 
 class BaseOutput(abc.ABC):
 
     def __init__(self, metadata, grid_info, radar_filetype):
 
+        self.config = bugtracker.config.load("./bugtracker.json")
         self.metadata = metadata
         self.grid_info = grid_info
         self.radar_filetype = radar_filetype
@@ -224,8 +226,6 @@ class NexradOutput(BaseOutput):
 
         super().__init__(metadata, grid_info, "nexrad")
 
-        pass
-
 
     def populate(self, nexrad_data):
         """
@@ -235,14 +235,20 @@ class NexradOutput(BaseOutput):
         output_shape = nexrad_data.reflectivity.shape
         flattened_shape = (self.grid_info.azims, self.grid_info.gates)
 
-        self.dbz_filtered = nexrad_data.dbz_filtered
-        self.dbz_unfiltered = nexrad_data.reflectivity
-        self.joint_product = nexrad_data.joint_product
-        self.dbz_elevs = nexrad_data.scan_angles
+        # A key part of keeping the output files a reasonable size
+        # is to only keep lowest N scans for the output. We keep
+        # all scans during the processing for the precip filter.
 
-        self.spectrum_width = nexrad_data.spectrum_width
-        self.velocity = nexrad_data.velocity
-        self.cross_correlation_ratio = nexrad_data.cross_correlation_ratio
+        max_scans = self.config['nexrad_settings']['vertical_scans']
+
+        self.dbz_filtered = nexrad_data.dbz_filtered[0:max_scans,:,:]
+        self.dbz_unfiltered = nexrad_data.reflectivity[0:max_scans,:,:]
+        self.joint_product = nexrad_data.joint_product[:,:]
+        self.dbz_elevs = nexrad_data.scan_angles[0:max_scans]
+
+        self.spectrum_width = nexrad_data.spectrum_width[0:max_scans,:,:]
+        self.velocity = nexrad_data.velocity[0:max_scans,:,:]
+        self.cross_correlation_ratio = nexrad_data.cross_correlation_ratio[0:max_scans,:,:]
 
 
     def validate(self):
