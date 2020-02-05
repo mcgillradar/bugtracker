@@ -129,6 +129,11 @@ class Processor(abc.ABC):
         pass
 
 
+    @abc.abstractmethod
+    def set_joint_product(self):
+        pass
+
+
 class IrisProcessor(Processor):
 
     def __init__(self, metadata, grid_info):
@@ -241,7 +246,7 @@ class IrisProcessor(Processor):
         """
 
         # Let's mask out anything over 30, first
-        bug_threshold = 30.0
+        bug_threshold = self.config['processing']['joint_cutoff']
         final_dbz = np.ma.masked_where(iris_data.dbz_filtered >= bug_threshold, iris_data.dbz_filtered)
 
         iris_data.joint_product = np.amax(final_dbz, axis=0)
@@ -438,17 +443,26 @@ class NexradProcessor(Processor):
         raw_dbz_mask = np.ma.getmask(nexrad_data.reflectivity)
         filter_mask = np.ma.mask_or(filter_joint, raw_dbz_mask)
 
-        nexrad_data.reflectivity = np.ma.array(nexrad_data.reflectivity, mask=filter_mask)
+        nexrad_data.dbz_filtered = np.ma.array(nexrad_data.reflectivity, mask=filter_mask)
 
-        filtered_dbz_shape = nexrad_data.reflectivity.shape
+        dbz_filtered_shape = nexrad_data.dbz_filtered.shape
 
-        if raw_dbz_shape != filtered_dbz_shape:
+        if raw_dbz_shape != dbz_filtered_shape:
             raise ValueError("Error in dbz array size")
 
 
     def set_joint_product(self, nexrad_data):
+        """
+        Collapsing 3D dbz product into a 2D flat grid.
+        """
 
-        print("Setting joint product...")
+        # Let's mask out anything over 30, first
+        bug_threshold = self.config['processing']['joint_cutoff']
+        final_dbz = np.ma.masked_where(nexrad_data.dbz_filtered >= bug_threshold, nexrad_data.dbz_filtered)
+
+        nexrad_data.joint_product = np.amax(final_dbz, axis=0)
+        print(type(nexrad_data.joint_product))
+        print("joint shape:", nexrad_data.joint_product.shape)
 
 
     def process_file(self, nexrad_file):
@@ -464,7 +478,7 @@ class NexradProcessor(Processor):
 
         # construct the PrecipFilter from iris_set
         precip = PrecipFilter(self.metadata, self.grid_info, nexrad_data.scan_angles)
-        self.filter_precip(precip)
+        precip.apply(nexrad_data.reflectivity, self.clutter, self.angles)
 
         t2 = time.time()
 

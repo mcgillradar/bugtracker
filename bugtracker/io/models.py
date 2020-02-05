@@ -60,10 +60,10 @@ class BaseOutput(abc.ABC):
         dset.createDimension("azims", azims)
         dset.createDimension("gates", gates)
 
-        nc_dbz_elevs = dset.createVariable("dbz_elevs", float, ('dbz_elevs',))
-        nc_dbz_filtered = dset.createVariable("dbz_filtered", float, ('dbz_elevs','azims','gates'))
-        nc_dbz_unfiltered = dset.createVariable("dbz_unfiltered", float, ('dbz_elevs','azims','gates'))
-        nc_dbz_joint = dset.createVariable("dbz_joint", float, ('azims','gates'))
+        nc_dbz_elevs = dset.createVariable("dbz_elevs", np.float32, ('dbz_elevs',))
+        nc_dbz_filtered = dset.createVariable("dbz_filtered", np.float32, ('dbz_elevs','azims','gates'))
+        nc_dbz_unfiltered = dset.createVariable("dbz_unfiltered", np.float32, ('dbz_elevs','azims','gates'))
+        nc_dbz_joint = dset.createVariable("dbz_joint", np.float32, ('azims','gates'))
 
         nc_dbz_elevs[:] = dbz_elevs[:]
         nc_dbz_filtered[:,:,:] = self.dbz_filtered[:,:,:]
@@ -83,6 +83,9 @@ class BaseOutput(abc.ABC):
 
         if self.dbz_filtered.shape != self.dbz_unfiltered.shape:
             raise ValueError("dbz grids must have the same dimension.")
+
+        if self.dbz_elevs is None:
+            raise ValueError("No scan angles")
 
         # check dimensions
         azims = self.grid_info.azims
@@ -149,10 +152,9 @@ class IrisOutput(BaseOutput):
         self.dbz_filtered = iris_data.dbz_filtered
         self.dbz_unfiltered = iris_data.dbz_unfiltered
         self.joint_product = iris_data.joint_product
-
         self.dbz_elevs = iris_data.dbz_elevs
-        self.dop_elevs = iris_data.dopvol_elevs
 
+        self.dop_elevs = iris_data.dopvol_elevs
         self.velocity = iris_data.velocity
         self.spectrum_width = iris_data.spectrum_width
         self.total_power = iris_data.total_power
@@ -196,10 +198,10 @@ class IrisOutput(BaseOutput):
 
         dset.createDimension("dop_elevs", num_dop_elevs)
 
-        nc_dop_elevs = dset.createVariable("dop_elevs", float, ('dop_elevs',))
-        nc_power = dset.createVariable("total_power", float, dop_dims)
-        nc_velocity = dset.createVariable("velocity", float, dop_dims)
-        nc_spectrum = dset.createVariable("spectrum_width", float, dop_dims)
+        nc_dop_elevs = dset.createVariable("dop_elevs", np.float32, ('dop_elevs',))
+        nc_power = dset.createVariable("total_power", np.float32, dop_dims)
+        nc_velocity = dset.createVariable("velocity", np.float32, dop_dims)
+        nc_spectrum = dset.createVariable("spectrum_width", np.float32, dop_dims)
 
         nc_dop_elevs[:] = dop_elevs[:]
         nc_power[:,:,:] = self.total_power[:,:,:]
@@ -233,16 +235,14 @@ class NexradOutput(BaseOutput):
         output_shape = nexrad_data.reflectivity.shape
         flattened_shape = (self.grid_info.azims, self.grid_info.gates)
 
-        self.dbz_filtered = np.zeros(output_shape, dtype=float)
-        self.dbz_unfiltered = np.zeros(output_shape, dtype=float)
-        self.joint_product = np.zeros(flattened_shape, dtype=float)
-
+        self.dbz_filtered = nexrad_data.dbz_filtered
+        self.dbz_unfiltered = nexrad_data.reflectivity
+        self.joint_product = nexrad_data.joint_product
         self.dbz_elevs = nexrad_data.scan_angles
-        #self.dop_elevs = iris_data.dopvol_elevs
 
-        #self.velocity = iris_data.velocity
-        #self.spectrum_width = iris_data.spectrum_width
-        #self.total_power = iris_data.total_power
+        self.spectrum_width = nexrad_data.spectrum_width
+        self.velocity = nexrad_data.velocity
+        self.cross_correlation_ratio = nexrad_data.cross_correlation_ratio
 
 
     def validate(self):
@@ -267,5 +267,17 @@ class NexradOutput(BaseOutput):
         super().write(filename)
 
         dset = nc.Dataset(filename, mode="a")
-        
+
+        #self.spectrum_width = nexrad_data.spectrum_width
+        #self.velocity = nexrad_data.velocity
+        #self.cross_corrleation_ratio = nexrad_data.cross_correlation_ratio
+
+        nc_spectrum = dset.createVariable("spectrum_width", np.float32, ('dbz_elevs','azims','gates'))
+        nc_velocity = dset.createVariable("velocity", np.float32, ('dbz_elevs','azims','gates'))
+        nc_ratio = dset.createVariable("cross_correlation_ratio", np.float32, ('dbz_elevs','azims','gates'))
+
+        nc_spectrum[:,:,:] = self.spectrum_width[:,:,:]
+        nc_velocity[:,:,:] = self.velocity[:,:,:]
+        nc_ratio[:,:,:] = self.cross_correlation_ratio[:,:,:]
+
         dset.close()
