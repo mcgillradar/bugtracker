@@ -232,7 +232,7 @@ class NexradOutput(BaseOutput):
         TODO: Keep filtered separate
         """
 
-        output_shape = nexrad_data.reflectivity.shape
+        output_shape = nexrad_data.dbz_unfiltered.shape
         flattened_shape = (self.grid_info.azims, self.grid_info.gates)
 
         # A key part of keeping the output files a reasonable size
@@ -242,7 +242,7 @@ class NexradOutput(BaseOutput):
         max_scans = self.config['nexrad_settings']['vertical_scans']
 
         self.dbz_filtered = nexrad_data.dbz_filtered[0:max_scans,:,:]
-        self.dbz_unfiltered = nexrad_data.reflectivity[0:max_scans,:,:]
+        self.dbz_unfiltered = nexrad_data.dbz_unfiltered[0:max_scans,:,:]
         self.joint_product = nexrad_data.joint_product[:,:]
         self.dbz_elevs = nexrad_data.scan_angles[0:max_scans]
 

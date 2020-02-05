@@ -439,11 +439,11 @@ class NexradProcessor(Processor):
         indicates before any processing has occured.
         """
 
-        raw_dbz_shape = nexrad_data.reflectivity.shape
-        raw_dbz_mask = np.ma.getmask(nexrad_data.reflectivity)
+        raw_dbz_shape = nexrad_data.dbz_unfiltered.shape
+        raw_dbz_mask = np.ma.getmask(nexrad_data.dbz_unfiltered)
         filter_mask = np.ma.mask_or(filter_joint, raw_dbz_mask)
 
-        nexrad_data.dbz_filtered = np.ma.array(nexrad_data.reflectivity, mask=filter_mask)
+        nexrad_data.dbz_filtered = np.ma.array(nexrad_data.dbz_unfiltered, mask=filter_mask)
 
         dbz_filtered_shape = nexrad_data.dbz_filtered.shape
 
@@ -478,7 +478,7 @@ class NexradProcessor(Processor):
 
         # construct the PrecipFilter from iris_set
         precip = PrecipFilter(self.metadata, self.grid_info, nexrad_data.scan_angles)
-        precip.apply(nexrad_data.reflectivity, self.clutter, self.angles)
+        precip.apply(nexrad_data.dbz_unfiltered, self.clutter, self.angles)
 
         t2 = time.time()
 
@@ -506,7 +506,7 @@ class NexradProcessor(Processor):
 
         precip_bool = precip.filter_3d.astype(bool)
 
-        target_id = bugtracker.core.target_id.TargetId(nexrad_data.reflectivity, clutter_bool, precip_bool)
+        target_id = bugtracker.core.target_id.TargetId(nexrad_data.dbz_unfiltered, clutter_bool, precip_bool)
         id_matrix = target_id.export_matrix()
 
         # Taking only desired levels

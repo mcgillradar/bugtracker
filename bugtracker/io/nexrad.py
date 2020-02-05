@@ -250,7 +250,7 @@ class NexradData:
         self.azims_per_upper = 360
 
         # Initializing normalized 3D fields
-        self.reflectivity = self.init_field()
+        self.dbz_unfiltered = self.init_field()
         self.spectrum_width = self.init_field()
         self.velocity = self.init_field()
         self.cross_correlation_ratio = self.init_field()
@@ -264,7 +264,7 @@ class NexradData:
 
         self.scan_angles = self.get_scan_angles(num_lower_levels, num_upper_levels)
 
-        if len(self.scan_angles) != self.reflectivity.shape[0]:
+        if len(self.scan_angles) != self.dbz_unfiltered.shape[0]:
             raise ValueError(f"Inconsistent number of scan angles: {self.scan_angles} != {self.reflectivity.shape[0]}")
 
         self.check_levels(num_lower_levels, num_upper_levels, input_dims)
@@ -427,7 +427,7 @@ class NexradData:
 
         # Code for one field first
 
-        self.fill_lower_field(self.reflectivity, "reflectivity", theta, start_idx, level)
+        self.fill_lower_field(self.dbz_unfiltered, "reflectivity", theta, start_idx, level)
         self.fill_lower_field(self.spectrum_width, "spectrum_width", theta, start_idx, level)
         self.fill_lower_field(self.cross_correlation_ratio, "cross_correlation_ratio", theta, start_idx, level)
         self.fill_lower_field(self.velocity, "velocity", theta, start_idx, level)
@@ -510,7 +510,7 @@ class NexradData:
 
         # Code for one field first
 
-        self.fill_upper_field(self.reflectivity, "reflectivity", theta, start_idx, new_idx)
+        self.fill_upper_field(self.dbz_unfiltered, "reflectivity", theta, start_idx, new_idx)
         self.fill_upper_field(self.spectrum_width, "spectrum_width", theta, start_idx, new_idx)
         self.fill_upper_field(self.cross_correlation_ratio, "cross_correlation_ratio", theta, start_idx, new_idx)
         self.fill_upper_field(self.velocity, "velocity", theta, start_idx, new_idx)
