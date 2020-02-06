@@ -389,10 +389,10 @@ class NexradController(Controller):
         dbz_threshold = self.config['clutter']['dbz_threshold']
         clutter_dims = self.clutter.get_dims()
 
-        if nex_data.reflectivity.shape != clutter_dims:
+        if nex_data.dbz_unfiltered.shape != clutter_dims:
             raise ValueError(f"Incompatible shape: {clutter_dims}")
 
-        clutter_above = nex_data.reflectivity > dbz_threshold
+        clutter_above = nex_data.dbz_unfiltered > dbz_threshold
 
         self.clutter_instances = self.clutter_instances + clutter_above.astype(int)
 
