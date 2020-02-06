@@ -27,7 +27,7 @@ import pyart
 from scipy import interpolate
 
 import bugtracker.core.utils
-
+from bugtracker.io.scan import ScanData
 
 class NexradManager:
     """
@@ -228,7 +228,7 @@ class NexradManager:
         return nexrad_data
 
 
-class NexradData:
+class NexradData(ScanData):
 
     def __init__(self, nexrad_file, metadata, grid_info):
         
@@ -240,11 +240,11 @@ class NexradData:
         One important step in this process is reverting the azimuth
         offsets that are present in the original 2D array.
         """
+        datetime = self.get_scan_dt(nexrad_file, metadata)
+
+        super().__init__(metadata, grid_info, datetime)
 
         self.handle = pyart.io.read(nexrad_file)
-        self.datetime = self.get_scan_dt(nexrad_file, metadata)
-        self.metadata = metadata
-        self.grid_info = grid_info
 
         self.azims_per_lower = 720
         self.azims_per_upper = 360

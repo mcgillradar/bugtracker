@@ -122,7 +122,7 @@ def plot_calib_iris(args, config):
         raise ValueError("Invalid length")
 
     metadata = bugtracker.core.metadata.from_iris_set(iris_collection.sets[0])
-    grid_info = bugtracker.core.iris.iris_grid()
+    grid_info = bugtracker.io.iris.iris_grid()
 
     nc_file = bugtracker.core.cache.calib_filepath(metadata, grid_info)
 
@@ -234,7 +234,7 @@ def run_iris_calib(args, config):
         raise ValueError("Invalid length")
 
     metadata = bugtracker.core.metadata.from_iris_set(iris_collection.sets[0])
-    grid_info = bugtracker.core.iris.iris_grid()
+    grid_info = bugtracker.io.iris.iris_grid()
 
     calib_grid = get_srtm(metadata, grid_info)
 

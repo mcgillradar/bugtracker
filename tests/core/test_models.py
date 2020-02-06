@@ -13,7 +13,7 @@ def test_iris_output():
     metadata = bugtracker.core.samples.metadata()
 
     iris_set_xam = bugtracker.core.samples.iris_set_xam(config)
-    iris_data = bugtracker.core.iris.IrisData(iris_set_xam)
+    iris_data = bugtracker.io.iris.IrisData(iris_set_xam)
 
     iris_data.dbz_filtered = np.random.rand(6,720,512)
     iris_data.dbz_unfiltered = np.random.rand(6,720,512)

@@ -194,7 +194,7 @@ class IrisController(Controller):
         above a threshold, adding to instances counters.
         """
 
-        iris_data = bugtracker.core.iris.IrisData(iris_set)
+        iris_data = bugtracker.io.iris.IrisData(iris_set)
         iris_data.fill_grids()
 
         dbz_threshold = self.config['clutter']['dbz_threshold']

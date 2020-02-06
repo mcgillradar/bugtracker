@@ -308,7 +308,7 @@ class IrisProcessor(Processor):
 
         t0 = time.time()
 
-        iris_data = bugtracker.core.iris.IrisData(iris_set)
+        iris_data = bugtracker.io.iris.IrisData(iris_set)
         iris_data.fill_grids()
         # plot the unmodified files
         #self.plot_iris(iris_data, "raw")

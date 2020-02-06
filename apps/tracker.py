@@ -107,7 +107,7 @@ def iris_tracker(args, config):
 
     first_set = iris_set_list[0]
     metadata = bugtracker.core.metadata.from_iris_set(first_set)
-    grid_info = bugtracker.core.iris.iris_grid()
+    grid_info = bugtracker.io.iris.iris_grid()
     print("metadata:", metadata)
     print("grid_info:", grid_info)
 

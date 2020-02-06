@@ -1,5 +1,4 @@
 import bugtracker.core.exceptions
-import bugtracker.core.iris
 import bugtracker.core.grid
 import bugtracker.core.metadata
 import bugtracker.core.cache
