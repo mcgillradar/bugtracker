@@ -272,6 +272,10 @@ class NexradData(ScanData):
         self.fill_lower(num_lower_levels)
         self.fill_upper(num_lower_levels, num_upper_levels)
 
+        # This is not a "classification filter", but a preprocessing step
+        min_dbz_cutoff = self.config['nexrad_settings']['dbz_cutoff']
+        self.dbz_unfiltered = np.ma.masked_where(self.dbz_unfiltered < min_dbz_cutoff, self.dbz_unfiltered)
+
 
     def __str__(self):
 

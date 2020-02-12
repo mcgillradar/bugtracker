@@ -394,6 +394,8 @@ class NexradController(Controller):
 
         clutter_above = nex_data.dbz_unfiltered > dbz_threshold
 
+        clutter_above = clutter_above.filled(fill_value=False)
+
         self.clutter_instances = self.clutter_instances + clutter_above.astype(int)
 
 
