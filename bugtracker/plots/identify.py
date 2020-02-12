@@ -34,6 +34,7 @@ import geopy
 import geopy.distance
 import netCDF4 as nc
 
+import bugtracker.core.utils
 from bugtracker.plots.radial import RadialPlotter
 
 
@@ -48,10 +49,12 @@ class TargetIdPlotter(RadialPlotter):
 
         self.data = np.ma.masked_where(self.data == 0, self.data)
 
+        bugtracker.core.utils.arr_info(self.data, "target_id")
+
         colors = ['red', 'blue', 'green']
         cmap = matplotlib.colors.ListedColormap(colors)
 
-        plt.pcolormesh(self.lons, self.lats, self.data, cmap=cmap)
+        plt.pcolormesh(self.lons, self.lats, self.data, vmin=1.0, vmax=3.0, cmap=cmap)
         cb = plt.colorbar()
 
         # This will need to be modified if more categories are added.
