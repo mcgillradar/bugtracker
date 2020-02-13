@@ -4,3 +4,4 @@ import bugtracker.plots.simple
 import bugtracker.plots.dbz
 import bugtracker.plots.identify
 import bugtracker.plots.alignment
+import bugtracker.plots.animation

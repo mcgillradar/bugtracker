@@ -1,29 +1,24 @@
 import os
 import glob
 import datetime
+import argparse
 
+import bugtracker
 import bugtracker.config
-
-
-
-def get_all_plots(config, start_date, end_date):
-    
-    
 
 
 def main():
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("start", help="Data timestamp YYYYmmddHHMM")
+    parser.add_argument("stop", help="Data timestamp YYYYmmddHHMM")
+    parser.add_argument("station", help="Station code")
+
+    args = parser.parse_args()
+
     config = bugtracker.config.load("./bugtracker.json")
 
-    datestamp = "201307160400"
-    station_id = "xam"
-    dt_hours = 6
-
-    start = datetime.datetime.strptime(datestamp, "%Y%m%d%H%M")
-    end = start + datetime.timedelta(hours=dt_hours)
-
-
-
-
+    manager = bugtracker.plots.animation.AnimationManager(config, args)
+    manager.animate_all()
 
 main()

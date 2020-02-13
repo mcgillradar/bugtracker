@@ -25,6 +25,12 @@ Optional but important step:
 
 ## Quick Start Guide
 
+Bugtracker depends also on one external utility
+1. wget
+
+
+Both can be installed using your linux package manager.
+
 
 conda activate bugtracker
 
