@@ -91,17 +91,12 @@ class AnimationManager:
         for plot in self.filtered_plots:
             basename = os.path.basename(plot)
             element_list = basename.split('_')
-            keyword = element_list[1]
+            keyword = "_".join(element_list[1:])
+            keyword = keyword[0:-4]
             if keyword in self.plot_bucket:
                 self.plot_bucket[keyword].append(plot)
             else:
                 self.plot_bucket[keyword] = [plot]
 
         for key in self.plot_bucket:
-            print(key, len(self.plot_bucket[key]))
-
-        # Starting just with joint plots
-        joints = self.plot_bucket["joint"]
-        joints.sort()
-
-        self.create_animation(joints, "joint")
+            self.create_animation(self.plot_bucket[key], key)
