@@ -70,6 +70,7 @@ class PrecipFilter(Filter):
         self.convol_clutter
         """
 
+
         azim_region = self.config['precip']['azim_region']
         gate_region = self.config['precip']['gate_region']
         
@@ -97,6 +98,7 @@ class PrecipFilter(Filter):
                 raise ValueError("Incompatible zone shapes.")
 
             zone_flat = list(zone_data.flatten())
+
             zone_clutter_flat = list(zone_clutter_bool.flatten())
 
             num_cells = len(zone_flat)
@@ -108,19 +110,20 @@ class PrecipFilter(Filter):
             for y in range(0, num_cells):
                 if not zone_clutter_flat[y]:
                     dbz = zone_flat[y]
-                    angle_list.append(angle)
-                    dbz_list.append(dbz)
-                    # Making trig approximation h = x*tan(theta)
-                    # Note, distance must be in km, and theta must
-                    # be converted to radians.
-                    # TODO: Use builtin pyart methods.
-                    rad_angle = math.radians(angle)
-                    # Using midpoint approximation
-                    midpoint = int((min_gate + max_gate) / 2.0)
-                    # Convert to kilometers
-                    distance = midpoint * self.grid_info.gate_step * 0.001
-                    height = distance * math.tan(rad_angle)
-                    height_list.append(height)
+                    if not isinstance(dbz, np.ma.core.MaskedConstant):
+                        angle_list.append(angle)
+                        dbz_list.append(dbz)
+                        # Making trig approximation h = x*tan(theta)
+                        # Note, distance must be in km, and theta must
+                        # be converted to radians.
+                        # TODO: Use builtin pyart methods.
+                        rad_angle = math.radians(angle)
+                        # Using midpoint approximation
+                        midpoint = int((min_gate + max_gate) / 2.0)
+                        # Convert to kilometers
+                        distance = midpoint * self.grid_info.gate_step * 0.001
+                        height = distance * math.tan(rad_angle)
+                        height_list.append(height)
 
         if len(angle_list) != len(dbz_list):
             raise ValueError("Zone slope error")
