@@ -180,39 +180,6 @@ class IrisProcessor(Processor):
             raise ValueError(f"Invalid dopvol dimensions: {self.dopvol_clutter.shape}")
 
 
-    def plot_graph(self, prefix, plot_type, angle, slice_data, plot_dt):
-
-        label = f"{prefix}_{plot_type}_{angle}"
-        max_range = 150
-
-        self.plotter.set_data(slice_data, label, plot_dt, self.metadata, max_range)
-        self.plotter.save_plot(min_value=-10, max_value=40)
-
-
-    def plot_iris(self, iris_data, label_prefix):
-        """
-        Plots a set of iris data
-        """
-
-        if self.plotter is None:
-            raise ValueError("Plotter has not been initialized!")
-
-        print("Plotting:", label_prefix)
-
-        print("Plotting convol")
-        for x in range(0, len(self.convol_angles)):
-            angle = self.convol_angles[x]
-            slice_data = iris_data.convol[x,:,:]
-            self.plot_graph(label_prefix, "convol", angle, slice_data, iris_data.datetime)
-
-        print("Plotting dopvol")
-        for x in range(0, len(self.dopvol_angles)):
-            angle = self.dopvol_angles[x]
-            slice_data = iris_data.dopvol[x,:,:]
-            self.plot_graph(label_prefix, "dopvol", angle, slice_data, iris_data.datetime)
-
-
-
     def impose_filter(self, iris_data, np_convol, np_dopvol):
         """
         Standin method for applying joint filters
@@ -310,8 +277,6 @@ class IrisProcessor(Processor):
 
         iris_data = bugtracker.io.iris.IrisData(iris_set)
         iris_data.fill_grids()
-        # plot the unmodified files
-        #self.plot_iris(iris_data, "raw")
         
         t1 = time.time()
 
@@ -546,3 +511,17 @@ class OdimProcessor(Processor):
         raise NotImplementedError("OdimProcessor")
 
 
+    def load_specific_calib(self):
+        pass
+
+
+    def verify_specific_calib(self):
+        pass
+
+
+    def impose_filter(self):
+        pass
+
+
+    def set_joint_product(self):
+        pass

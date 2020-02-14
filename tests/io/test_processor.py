@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 import bugtracker
@@ -32,9 +34,6 @@ def test_not_implemented():
     with pytest.raises(NotImplementedError):
         odim = bugtracker.io.processor.OdimProcessor(metadata, grid_info)
 
-    with pytest.raises(NotImplementedError):
-        nexrad = bugtracker.io.processor.NexradProcessor(metadata, grid_info)
-
 
 def test_iris_empty_data():
     """
@@ -48,7 +47,6 @@ def test_iris_empty_data():
     empty_list = []
 
     processor = bugtracker.io.processor.IrisProcessor(metadata, grid_info)
-    processor.init_plotter()
 
     with pytest.raises(ValueError):
         processor.process_sets(empty_list)
@@ -67,9 +65,9 @@ def test_iris_actual_data():
     sample_list = [sample_iris]
 
     processor = bugtracker.io.processor.IrisProcessor(metadata, grid_info)
-    processor.init_plotter()
     processor.process_sets(sample_list)
 
-    output_file = os.path.join(config['netcdf_dir'], 'dbz_201307171949.nc')
+    output_dir = os.path.join(config['netcdf_dir'], metadata.radar_id)
+    output_file = os.path.join(output_dir, 'dbz_201307171949.nc')
     assert os.path.isfile(output_file)
 

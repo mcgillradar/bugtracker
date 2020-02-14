@@ -23,7 +23,7 @@ def test_fields():
     config_path = "../apps/bugtracker.json"
     config = bugtracker.config.load(config_path)
 
-    folders = ["archive_dir", "plot_dir", "cache_dir"]
+    folders = ["plot_dir", "netcdf_dir", "cache_dir", "animation_dir"]
     for folder in folders:
         assert folder in config
         assert os.path.isdir(config[folder])
