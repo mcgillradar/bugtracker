@@ -54,7 +54,7 @@ class NexradPrecipFilter(Filter):
         pass
 
 
-    def plot_filter(self, dr_linear, plot_datetime):
+    def plot_filter(self, nexrad_data, dr_linear):
 
         #RadialPlotter(self, lats, lons, output_folder, grid_info)
 
@@ -66,13 +66,19 @@ class NexradPrecipFilter(Filter):
         output_folder = os.path.join(base_folder, self.metadata.radar_id)
 
         plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, output_folder, self.grid_info)
-        plotter.set_data(dr_linear, "dr_linear", plot_datetime, self.metadata, 150.0)
+        plotter.set_data(dr_linear, "dr_linear", nexrad_data.datetime, self.metadata, 150.0)
+        plotter.save_plot(min_value=-1.0, max_value=1.0)
+
+        plotter.set_data(nexrad_data.diff_reflectivity, "diff_reflect", nexrad_data.datetime, self.metadata, 150.0)
+        plotter.save_plot(min_value=-50.0, max_value=50.0)
+
+        plotter.set_data(nexrad_data.cross_correlation_ratio, "correlation", nexrad_data.datetime, self.metadata, 150.0)
         plotter.save_plot(min_value=-1.0, max_value=1.0)
 
 
     def apply(self, nexrad_data):
 
-        z_dr = nexrad_data.diff_reflectivity
+        z_dr_log = nexrad_data.diff_reflectivity
         rho_hv = nexrad_data.cross_correlation_ratio
 
         """
@@ -83,8 +89,9 @@ class NexradPrecipFilter(Filter):
         """
         precip_cutoff = 0.0630957
 
-        z_offset = z_dr + 1.0
-        z_rhs = 2.0 * np.multiply(np.sqrt(z_dr), rho_hv)
+        z_dr_lin = np.power(10.0, (0.1 * z_dr_log))
+        z_offset = z_dr_lin + 1.0
+        z_rhs = 2.0 * np.multiply(np.sqrt(z_dr_lin), rho_hv)
 
         numerator = z_offset - z_rhs
         denominator = z_offset + z_rhs
@@ -94,7 +101,7 @@ class NexradPrecipFilter(Filter):
         if dr_linear.shape != self.filter_3d.shape:
             raise ValueError("Incompatible filter dimensions")
 
-        #self.plot_filter(dr_linear, nexrad_data.datetime)
+        self.plot_filter(nexrad_data, dr_linear)
         self.filter_3d = dr_linear < precip_cutoff
 
         bugtracker.core.utils.arr_info(dr_linear, "dr_linear")
