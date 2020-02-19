@@ -30,7 +30,7 @@ import netCDF4 as nc
 from scipy import stats
 
 import bugtracker
-from bugtracker.core.precip import PrecipFilter
+import bugtracker.core.precip
 
 class Processor(abc.ABC):
 
@@ -284,8 +284,8 @@ class IrisProcessor(Processor):
         convol_precip = PrecipFilter(self.metadata, self.grid_info, self.convol_angles)
         dopvol_precip = PrecipFilter(self.metadata, self.grid_info, self.dopvol_angles)
 
-        convol_precip.apply(iris_data.convol, self.convol_clutter, self.convol_angles)
-        convol_precip.copy(dopvol_precip)
+        #convol_precip.apply(iris_data.convol, self.convol_clutter, self.convol_angles)
+        #convol_precip.copy(dopvol_precip)
 
         t2 = time.time()
 
@@ -438,12 +438,11 @@ class NexradProcessor(Processor):
 
         nexrad_data = self.manager.extract_data(nexrad_file)
 
-        
         t1 = time.time()
 
         # construct the PrecipFilter from iris_set
-        precip = PrecipFilter(self.metadata, self.grid_info, nexrad_data.dbz_elevs)
-        precip.apply(nexrad_data.dbz_unfiltered, self.clutter, self.angles)
+        precip = bugtracker.core.precip.NexradPrecipFilter(self.metadata, self.grid_info, nexrad_data.dbz_elevs)
+        precip.apply(nexrad_data)
 
         t2 = time.time()
 

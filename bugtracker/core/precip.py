@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import os
 import time
 import math
 
@@ -24,6 +25,79 @@ from scipy import stats
 
 import bugtracker.core.utils
 from bugtracker.core.filter import Filter
+import bugtracker.plots.radial
+
+
+class IrisPrecipFilter(Filter):
+
+    def __init__(self, metadata, grid_info, angles):
+
+        super().__init__(metadata, grid_info)
+        self.setup(angles)
+        self.config = bugtracker.load("./bugtracker.json")
+
+
+class NexradPrecipFilter(Filter):
+
+    def __init__(self, metadata, grid_info, angles):
+
+        super().__init__(metadata, grid_info)
+        self.setup(angles)
+        self.config = bugtracker.config.load("./bugtracker.json")
+
+
+    def verify_dims(self):
+        """
+        Compare nexrad_data dimensions
+        """
+
+        pass
+
+
+    def plot_filter(self, dr_linear, plot_datetime):
+
+        #RadialPlotter(self, lats, lons, output_folder, grid_info)
+
+        grid_coords = bugtracker.core.utils.latlon(self.grid_info, self.metadata)
+        lats = grid_coords['lats']
+        lons = grid_coords['lons']
+
+        base_folder = self.config['plot_dir']
+        output_folder = os.path.join(base_folder, self.metadata.radar_id)
+
+        plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, output_folder, self.grid_info)
+        plotter.set_data(dr_linear, "dr_linear", plot_datetime, self.metadata, 150.0)
+        plotter.save_plot(min_value=-1.0, max_value=1.0)
+
+
+    def apply(self, nexrad_data):
+
+        z_dr = nexrad_data.diff_reflectivity
+        rho_hv = nexrad_data.cross_correlation_ratio
+
+        """
+        This cutoff comes from the equation DR(db) = 10*log10(DR_lin)
+        from the paper: A Simple and Effective Method for Separating 
+        Meteorological from Nonmeteorological Targets Using
+        Dual-Polarization Data
+        """
+        precip_cutoff = 0.0630957
+
+        z_offset = z_dr + 1.0
+        z_rhs = 2.0 * np.multiply(np.sqrt(z_dr), rho_hv)
+
+        numerator = z_offset - z_rhs
+        denominator = z_offset + z_rhs
+
+        dr_linear = np.divide(numerator, denominator)
+
+        if dr_linear.shape != self.filter_3d.shape:
+            raise ValueError("Incompatible filter dimensions")
+
+        self.plot_filter(dr_linear, nexrad_data.datetime)
+        self.filter_3d = dr_linear < precip_cutoff
+
+        bugtracker.core.utils.arr_info(dr_linear, "dr_linear")
 
 
 class PrecipFilter(Filter):

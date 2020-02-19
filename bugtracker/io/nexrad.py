@@ -254,6 +254,7 @@ class NexradData(ScanData):
         self.spectrum_width = self.init_field()
         self.velocity = self.init_field()
         self.cross_correlation_ratio = self.init_field()
+        self.diff_reflectivity = self.init_field()
 
         self.check_consistency()
 
@@ -369,6 +370,7 @@ class NexradData(ScanData):
         self.check_field_dims("reflectivity")
         self.check_field_dims("cross_correlation_ratio")
         self.check_field_dims("velocity")
+        self.check_field_dims("differential_reflectivity")
 
 
     def check_levels(self, num_lower, num_upper, input_shape):
@@ -435,6 +437,7 @@ class NexradData(ScanData):
         self.fill_lower_field(self.spectrum_width, "spectrum_width", theta, start_idx, level)
         self.fill_lower_field(self.cross_correlation_ratio, "cross_correlation_ratio", theta, start_idx, level)
         self.fill_lower_field(self.velocity, "velocity", theta, start_idx, level)
+        self.fill_lower_field(self.diff_reflectivity, "differential_reflectivity", theta, start_idx, level)
 
 
     def fill_lower(self, num_lower):
@@ -518,6 +521,7 @@ class NexradData(ScanData):
         self.fill_upper_field(self.spectrum_width, "spectrum_width", theta, start_idx, new_idx)
         self.fill_upper_field(self.cross_correlation_ratio, "cross_correlation_ratio", theta, start_idx, new_idx)
         self.fill_upper_field(self.velocity, "velocity", theta, start_idx, new_idx)
+        self.fill_upper_field(self.diff_reflectivity, "differential_reflectivity", theta, start_idx, new_idx)
 
 
     def fill_upper(self, num_lower, num_upper):
