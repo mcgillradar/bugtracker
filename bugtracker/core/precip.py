@@ -94,7 +94,7 @@ class NexradPrecipFilter(Filter):
         if dr_linear.shape != self.filter_3d.shape:
             raise ValueError("Incompatible filter dimensions")
 
-        self.plot_filter(dr_linear, nexrad_data.datetime)
+        #self.plot_filter(dr_linear, nexrad_data.datetime)
         self.filter_3d = dr_linear < precip_cutoff
 
         bugtracker.core.utils.arr_info(dr_linear, "dr_linear")

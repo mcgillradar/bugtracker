@@ -281,8 +281,8 @@ class IrisProcessor(Processor):
         t1 = time.time()
 
         # construct the PrecipFilter from iris_set
-        convol_precip = PrecipFilter(self.metadata, self.grid_info, self.convol_angles)
-        dopvol_precip = PrecipFilter(self.metadata, self.grid_info, self.dopvol_angles)
+        convol_precip = bugtracker.core.precip.PrecipFilter(self.metadata, self.grid_info, self.convol_angles)
+        dopvol_precip = bugtracker.core.precip.PrecipFilter(self.metadata, self.grid_info, self.dopvol_angles)
 
         #convol_precip.apply(iris_data.convol, self.convol_clutter, self.convol_angles)
         #convol_precip.copy(dopvol_precip)
