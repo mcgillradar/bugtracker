@@ -22,5 +22,5 @@ setup(
     package_data={'pyrefract.corelib': ['io_corelib.so']},
     python_requires='>=3.5, <4',
     install_requires=['numpy', 'matplotlib', 'opencv-python', 'cartopy', 'beautifulsoup4', 
-                      'requests', 'scipy', 'geopy', 'arm-pyart', 'pytest'],
+                      'requests', 'scipy', 'geopy', 'arm-pyart', 'pytest', 'pyproj'],
 )
