@@ -92,7 +92,7 @@ class RadialPlotter():
         print("min_data:", min_data, "max_data:", max_data)
 
         # Number of distinct color levels
-        gradations = 160
+        gradations = 22
         gradation_step = (max_data - min_data) / float(gradations)
 
         CS2 = plt.contourf(self.lons, self.lats, self.data, gradations,
