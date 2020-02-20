@@ -21,7 +21,7 @@ git clone https://github.com/mcgillradar/bugtracker.git
 
 3. As bugtracker is not yet publicly available on the PyPI package index, you will need to build the package from sources.
 
-Run the following script in the top level of the repository.
+Run the following script in the top level of the repository. Note: You may need to run this script as sudo, and make sure 'python' is an alias for your python3 interpreter. If not, you will need to modify the update.sh script so it points to the right python.
 ```sh
 ./update.sh
 ```
