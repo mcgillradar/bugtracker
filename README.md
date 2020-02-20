@@ -1,4 +1,4 @@
-# Bugtracker
+# <img alt="Bugtracker" src="bugtracker_logo.svg" height="60">
 
 What is this application?
 
