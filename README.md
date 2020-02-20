@@ -80,5 +80,9 @@ python3 tracker.py 201907300300 nexrad kcbw
 
 Makes heavy use of object-oriented programming in Python.
 
-    Reusable components, inheritance Processor -> IrisProcessor For calibration, Controller -> IrisController Filter -> ClutterFilter, PrecipFilter
-    metadata, grid_info These objects crop up throughout the code.
+1. I make use of inheritance to allow reusable code between the IRIS, NEXRAD and ODIM_H5 processing code. For example:
+* Processor -> IrisProcessor
+* Controller -> IrisController and Controller -> NexradController
+* Filter -> ClutterFilter, PrecipFilter
+
+2. Important information about the rader is contained within the Metadata and GridInfo classes.
