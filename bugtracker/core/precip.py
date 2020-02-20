@@ -58,6 +58,8 @@ class NexradPrecipFilter(Filter):
 
         #RadialPlotter(self, lats, lons, output_folder, grid_info)
 
+        max_range = 30.0
+
         grid_coords = bugtracker.core.utils.latlon(self.grid_info, self.metadata)
         lats = grid_coords['lats']
         lons = grid_coords['lons']
@@ -70,14 +72,14 @@ class NexradPrecipFilter(Filter):
         print("cross:", nexrad_data.cross_correlation_ratio.shape)
 
         plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, output_folder, self.grid_info)
-        plotter.set_data(dr_linear[0,:,:], "dr_linear", nexrad_data.datetime, self.metadata, 150.0)
-        plotter.save_plot(min_value=-1.0, max_value=1.0)
+        plotter.set_data(dr_linear[0,:,:], "dr_linear", nexrad_data.datetime, self.metadata, max_range)
+        plotter.save_plot(min_value=0.0, max_value=0.22)
 
-        plotter.set_data(nexrad_data.diff_reflectivity[0,:,:], "diff_reflect", nexrad_data.datetime, self.metadata, 150.0)
-        plotter.save_plot(min_value=-20.0, max_value=20.0)
+        plotter.set_data(nexrad_data.diff_reflectivity[0,:,:], "diff_reflect", nexrad_data.datetime, self.metadata, max_range)
+        plotter.save_plot(min_value=-5.0, max_value=10.0)
 
-        plotter.set_data(nexrad_data.cross_correlation_ratio[0,:,:], "correlation", nexrad_data.datetime, self.metadata, 150.0)
-        plotter.save_plot(min_value=-1.0, max_value=1.0)
+        plotter.set_data(nexrad_data.cross_correlation_ratio[0,:,:], "correlation", nexrad_data.datetime, self.metadata, max_range)
+        plotter.save_plot(min_value=0.2, max_value=1.0)
 
 
     def apply(self, nexrad_data):
@@ -105,7 +107,7 @@ class NexradPrecipFilter(Filter):
         if dr_linear.shape != self.filter_3d.shape:
             raise ValueError("Incompatible filter dimensions")
 
-        #self.plot_filter(nexrad_data, dr_linear)
+        self.plot_filter(nexrad_data, dr_linear)
         self.filter_3d = dr_linear < precip_cutoff
 
         bugtracker.core.utils.arr_info(dr_linear, "dr_linear")
