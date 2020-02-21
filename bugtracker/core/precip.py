@@ -58,7 +58,7 @@ class NexradPrecipFilter(Filter):
 
         #RadialPlotter(self, lats, lons, output_folder, grid_info)
 
-        max_range = 30.0
+        max_range = self.config['plot_settings']['max_range']
 
         grid_coords = bugtracker.core.utils.latlon(self.grid_info, self.metadata)
         lats = grid_coords['lats']
@@ -71,21 +71,58 @@ class NexradPrecipFilter(Filter):
         print("diff_reflect:", nexrad_data.diff_reflectivity.shape)
         print("cross:", nexrad_data.cross_correlation_ratio.shape)
 
-        plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, output_folder, self.grid_info)
-        plotter.set_data(dr_linear[0,:,:], "dr_linear", nexrad_data.datetime, self.metadata, max_range)
-        plotter.save_plot(min_value=0.0, max_value=0.22)
+        num_elevs = len(nexrad_data.dbz_elevs)
 
-        plotter.set_data(nexrad_data.diff_reflectivity[0,:,:], "diff_reflect", nexrad_data.datetime, self.metadata, max_range)
-        plotter.save_plot(min_value=-5.0, max_value=10.0)
+        for x in range(0, num_elevs):
+            current_elev = nexrad_data.dbz_elevs[x]
+            plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, output_folder, self.grid_info)
+            plotter.set_data(dr_linear[x,:,:], f"{current_elev}_dr_linear", nexrad_data.datetime, self.metadata, max_range)
+            plotter.save_plot(min_value=0.0, max_value=0.22)
 
-        plotter.set_data(nexrad_data.cross_correlation_ratio[0,:,:], "correlation", nexrad_data.datetime, self.metadata, max_range)
-        plotter.save_plot(min_value=0.2, max_value=1.0)
+            plotter.set_data(nexrad_data.diff_reflectivity[x,:,:], f"{current_elev}_diff_reflect", nexrad_data.datetime, self.metadata, max_range)
+            plotter.save_plot(min_value=-5.0, max_value=10.0)
+
+            plotter.set_data(nexrad_data.cross_correlation_ratio[x,:,:], f"{current_elev}_correlation", nexrad_data.datetime, self.metadata, max_range)
+            plotter.save_plot(min_value=0.2, max_value=1.0)
+
+            print("Current angle:", current_elev)
+
+            bugtracker.core.utils.arr_info(dr_linear[x,:,:], "dr_linear")
+            bugtracker.core.utils.arr_info(nexrad_data.diff_reflectivity[x,:,:], "diff_reflect")
+            bugtracker.core.utils.arr_info(nexrad_data.cross_correlation_ratio[x,:,:], "correlation")
+
+
+    def subgrid_smoothing(self, source):
+
+        azims = self.grid_info.azims
+        gates = self.grid_info.gates
+        elevs = source.shape[0]
+
+        azim_subgrids = azims // 3
+        gate_subgrids = gates // 3
+
+        new_grid = np.zeros(source.shape, dtype=float)
+
+        for z in range(0, elevs):
+            for x in range(0, azim_subgrids):
+                for y in range(0, gate_subgrids):
+                    azim_start = 3 * x
+                    azim_end = 3 * (x + 1)
+                    gate_start = 3 * y
+                    gate_end = 3 * (y + 1)
+                    mean_value = source[z,azim_start:azim_end,gate_start:gate_end].mean()
+                    new_grid[z,azim_start:azim_end,gate_start:gate_end] = mean_value
+        
+        # Filling final last bit
+        new_grid[:,:,gate_subgrids*3:] = 1.0
+
+        return new_grid
 
 
     def apply(self, nexrad_data):
 
-        z_dr_log = nexrad_data.diff_reflectivity
-        rho_hv = nexrad_data.cross_correlation_ratio
+        z_dr_log = self.subgrid_smoothing(nexrad_data.diff_reflectivity)
+        rho_hv = self.subgrid_smoothing(nexrad_data.cross_correlation_ratio)
 
         """
         This cutoff comes from the equation DR(db) = 10*log10(DR_lin)
@@ -93,7 +130,9 @@ class NexradPrecipFilter(Filter):
         Meteorological from Nonmeteorological Targets Using
         Dual-Polarization Data
         """
-        precip_cutoff = 0.0630957
+
+        #precip_cutoff = 0.0630957
+        precip_cutoff = 0.07
 
         z_dr_lin = np.power(10.0, (0.1 * z_dr_log))
         z_offset = z_dr_lin + 1.0
@@ -107,7 +146,7 @@ class NexradPrecipFilter(Filter):
         if dr_linear.shape != self.filter_3d.shape:
             raise ValueError("Incompatible filter dimensions")
 
-        self.plot_filter(nexrad_data, dr_linear)
+        #self.plot_filter(nexrad_data, dr_linear)
         self.filter_3d = dr_linear < precip_cutoff
 
         bugtracker.core.utils.arr_info(dr_linear, "dr_linear")
