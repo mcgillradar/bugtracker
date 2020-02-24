@@ -22,6 +22,7 @@ import math
 
 import numpy as np
 from scipy import stats
+import pyart
 
 import bugtracker.core.utils
 from bugtracker.core.filter import Filter
@@ -30,16 +31,130 @@ import bugtracker.plots.radial
 
 class IrisPrecipFilter(Filter):
 
-    def __init__(self, metadata, grid_info, angles):
+    def __init__(self, metadata, grid_info, iris_set):
+        """
+        The IRIS precipitation filter will be determined using the full set
+        of convol scans. A large vertical sweep is required in order for the
+        gradient-based precip detection method to be effective.
+
+        Note that the gradient is a function of dBZ/km elevation, not elevation
+        angle.
+        """
 
         super().__init__(metadata, grid_info)
+
+        # Using one output elevation angle
+
+        self.convol = pyart.io.read(iris_set.convol)
+        
+        # Using one horizontal angle (for now)
+        angles = [0.0]
+
         self.setup(angles)
-        self.config = bugtracker.load("./bugtracker.json")
+        self.config = bugtracker.config.load("./bugtracker.json")
+
+
+    def get_convol_coords(self):
+
+        t0 = time.time()
+
+        azimuths = self.convol.azimuth['data']
+        ranges = self.convol.range['data']
+        elevations = self.convol.elevation['data']
+
+        num_azims = len(azimuths)
+        num_ranges = len(ranges)
+        shape = (num_azims, num_ranges)
+        augmented_azims = np.zeros(shape, dtype=float)
+        augmented_ranges = np.zeros(shape, dtype=float)
+        augmented_elevs = np.zeros(shape, dtype=float)
+
+        for x in range(0, num_ranges):
+            augmented_azims[:,x] = azimuths[:]
+            augmented_elevs[:,x] = elevations[:]
+
+        for y in range(0, num_azims):
+            augmented_ranges[y,:] = ranges[:]
+
+        # Normalizing to kilometers
+        augmented_ranges = augmented_ranges / 1000.0
+
+        bugtracker.core.utils.arr_info(augmented_azims, "aug_azims")
+        bugtracker.core.utils.arr_info(augmented_ranges, "aug_ranges")
+        bugtracker.core.utils.arr_info(augmented_elevs, "elevs")
+
+        x_arr, y_arr, z_arr = pyart.core.antenna_to_cartesian(augmented_ranges, augmented_azims, augmented_elevs)
+
+        bugtracker.core.utils.arr_info(x_arr, "x_arr")
+        bugtracker.core.utils.arr_info(y_arr, "y_arr")
+        bugtracker.core.utils.arr_info(z_arr, "z_arr")
+
+        print(x_arr[0,])
+
+        lon_0 = self.metadata.lon
+        lat_0 = self.metadata.lat
+
+        lons, lats = pyart.core.cartesian_to_geographic_aeqd(x_arr, y_arr, lon_0, lat_0)
+    
+
+        # Convert to polar
+
+        convol_coords = dict()
+        convol_coords['lats'] = lats
+        convol_coords['lons'] = lons
+
+        t1 = time.time()
+
+        elapsed = t1 - t0
+        print("Convol coords time:", elapsed)
+
+        return convol_coords
+
+
+
+    def projection(self):
+        """
+        For bug echoes, we are looking close to 0 degrees in our scan.
+        Therefore, we are interested in a precipitation filter that corresponds
+        to this angle, and can be assumed to be constant in the vertical direction.
+
+        However, for elevation angles as high as 24 degrees, we cannot consider
+        them in the same vertical column. Therefore we must project onto the GridInfo
+        grid that is used for the processing algorithm.
+        """
+
+        grid_coords = bugtracker.core.utils.latlon(self.grid_info, self.metadata)
+
+        lats = grid_coords['lats']
+        lons = grid_coords['lons']
+
+        convol_coords = self.get_convol_coords()
+
+        convol_lats = convol_coords['lats']
+        convol_lons = convol_coords['lons']
+
+        input("waiting>")
+
+
+    def determine_angles(self, iris_set):
+        """
+        Look at the CONVOL file, and see how many vertical
+        scans there are.
+        """
+
+        fixed_angles = len(self.convol.fixed_target['data'])
+
+
+
 
 
 class NexradPrecipFilter(Filter):
 
     def __init__(self, metadata, grid_info, angles):
+        """
+        The NEXRAD precipitation filter is based on a differential
+        reflectivity and correlation method.
+        """
 
         super().__init__(metadata, grid_info)
         self.setup(angles)

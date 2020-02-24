@@ -56,7 +56,6 @@ def arr_info(np_array, label):
     print("shape:", np_array.shape)
     print("max:", np_array.max())
     print("min:", np_array.min())
-    print(np_array)
 
 
 class BoundingBox:
