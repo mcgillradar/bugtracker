@@ -23,6 +23,7 @@ import math
 import numpy as np
 from scipy import stats
 import pyart
+import geopy.distance
 
 import bugtracker.core.utils
 from bugtracker.core.filter import Filter
@@ -79,29 +80,35 @@ class IrisPrecipFilter(Filter):
         # Normalizing to kilometers
         augmented_ranges = augmented_ranges / 1000.0
 
+        """
         bugtracker.core.utils.arr_info(augmented_azims, "aug_azims")
         bugtracker.core.utils.arr_info(augmented_ranges, "aug_ranges")
         bugtracker.core.utils.arr_info(augmented_elevs, "elevs")
+        """
 
         x_arr, y_arr, z_arr = pyart.core.antenna_to_cartesian(augmented_ranges, augmented_azims, augmented_elevs)
 
-        bugtracker.core.utils.arr_info(x_arr, "x_arr")
-        bugtracker.core.utils.arr_info(y_arr, "y_arr")
-        bugtracker.core.utils.arr_info(z_arr, "z_arr")
-
-        print(x_arr[0,])
+        distance_arr = np.sqrt(np.square(x_arr) + np.square(y_arr))
+        bugtracker.core.utils.arr_info(distance_arr, "distance_arr")
 
         lon_0 = self.metadata.lon
         lat_0 = self.metadata.lat
 
+        print("lon_0:", lon_0)
+        print("lat_0:", lat_0)
+
         lons, lats = pyart.core.cartesian_to_geographic_aeqd(x_arr, y_arr, lon_0, lat_0)
-    
+
+        bugtracker.core.utils.arr_info(lons, "convol_lons")
+        bugtracker.core.utils.arr_info(lats, "convol_lats")
 
         # Convert to polar
 
         convol_coords = dict()
         convol_coords['lats'] = lats
         convol_coords['lons'] = lons
+        convol_coords['distance'] = distance_arr
+        convol_coords['z_arr'] = z_arr
 
         t1 = time.time()
 
@@ -110,6 +117,48 @@ class IrisPrecipFilter(Filter):
 
         return convol_coords
 
+
+    def bin_results(self, grid_coords, convol_coords):
+        """
+        Probably the most logical approach would be to find a mapping correpsondence
+        where each (lat/lon) pair in the convol grid gets an index mapping it to its
+        corresponding slot in the GridInfo grid.
+
+        The naive way of approaching this is a nested loop over both grids, resulting
+        in an O(n^4) runtime. This will be computationally prohibitive, so we need to
+        use a better algorithm.
+        """
+
+        lats = grid_coords['lats']
+        lons = grid_coords['lons']
+
+        convol_lats = convol_coords['lats']
+        convol_lons = convol_coords['lons']
+        convol_z = convol_coords['z_arr']
+        convol_dbz = self.convol.fields['total_power']['data']
+
+        lon_0 = self.metadata.lon
+        lat_0 = self.metadata.lat
+        radar_coords = (lat_0, lon_0)
+
+        grid_shape = lats.shape
+        convol_shape = convol_lats.shape
+
+        proj_distance = np.zeros(convol_shape, dtype=float)
+
+        t0 = time.time()
+
+        for x in range(0, convol_shape[0]):
+            for y in range(0, convol_shape[1]):
+                convol_coords = (convol_lats[x,y], convol_lons[x,y])
+                dist = geopy.distance.distance(radar_coords, convol_coords).km
+                proj_distance[x,y] = dist
+
+        bugtracker.core.utils.arr_info(proj_distance, "distance")
+
+        t1 = time.time()
+        elapsed = t1 - t0
+        print("Time for range:", elapsed)
 
 
     def projection(self):
@@ -125,15 +174,10 @@ class IrisPrecipFilter(Filter):
 
         grid_coords = bugtracker.core.utils.latlon(self.grid_info, self.metadata)
 
-        lats = grid_coords['lats']
-        lons = grid_coords['lons']
 
         convol_coords = self.get_convol_coords()
 
-        convol_lats = convol_coords['lats']
-        convol_lons = convol_coords['lons']
-
-        input("waiting>")
+        self.bin_results(grid_coords, convol_coords)
 
 
     def determine_angles(self, iris_set):
