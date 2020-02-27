@@ -56,6 +56,7 @@ def arr_info(np_array, label):
     print("shape:", np_array.shape)
     print("max:", np_array.max())
     print("min:", np_array.min())
+    print("mean:", np_array.mean())
     print(np_array)
 
 

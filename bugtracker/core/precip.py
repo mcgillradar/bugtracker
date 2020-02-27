@@ -47,7 +47,7 @@ class IrisPrecipFilter(Filter):
         # Using one output elevation angle
 
         self.convol = pyart.io.read(iris_set.convol)
-        
+        self.bins = None
         # Using one horizontal angle (for now)
         angles = [0.0]
 
@@ -57,7 +57,6 @@ class IrisPrecipFilter(Filter):
 
     def get_convol_coords(self):
 
-        t0 = time.time()
 
         azimuths = self.convol.azimuth['data']
         ranges = self.convol.range['data']
@@ -80,12 +79,6 @@ class IrisPrecipFilter(Filter):
         # Normalizing to kilometers
         augmented_ranges = augmented_ranges / 1000.0
 
-        """
-        bugtracker.core.utils.arr_info(augmented_azims, "aug_azims")
-        bugtracker.core.utils.arr_info(augmented_ranges, "aug_ranges")
-        bugtracker.core.utils.arr_info(augmented_elevs, "elevs")
-        """
-
         x_arr, y_arr, z_arr = pyart.core.antenna_to_cartesian(augmented_ranges, augmented_azims, augmented_elevs)
 
         distance_arr = np.sqrt(np.square(x_arr) + np.square(y_arr))
@@ -105,60 +98,181 @@ class IrisPrecipFilter(Filter):
         # Convert to polar
 
         convol_coords = dict()
-        convol_coords['lats'] = lats
-        convol_coords['lons'] = lons
         convol_coords['distance'] = distance_arr
-        convol_coords['z_arr'] = z_arr
+        # Converting height to kilometers
+        convol_coords['z_km'] = z_arr / 1000.0
 
-        t1 = time.time()
-
-        elapsed = t1 - t0
-        print("Convol coords time:", elapsed)
 
         return convol_coords
 
 
-    def bin_results(self, grid_coords, convol_coords):
+    def get_key(self, bucket_azim, bucket_gate):
+
+        return f"{bucket_azim:03}_{bucket_gate:03}"
+
+
+    def get_bucket(self, distance, azimuth):
+
+        # The following are integers
+        azim_bin_size = self.config["iris_settings"]["azim_precip_region"]
+        gate_bin_size = self.config["iris_settings"]["gate_precip_region"]
+
+        azims = self.grid_info.azims
+        gates = self.grid_info.gates
+        azim_step = self.grid_info.azim_step
+        gate_step = self.grid_info.gate_step
+        azim_offset = self.grid_info.azim_offset
+        gate_offset = self.grid_info.gate_offset
+
+        adj_azim = azimuth - azim_offset
+        adj_distance = distance - gate_offset
+
+        float_azim_idx = adj_azim / azim_step
+        float_gate_idx = adj_distance / gate_step
+
+        reduced_azim_idx = float_azim_idx / azim_bin_size
+        reduced_gate_idx = float_gate_idx / gate_bin_size
+
+        bucket_azim = int(reduced_azim_idx)
+        bucket_gate = int(reduced_gate_idx)
+
+        return bucket_azim, bucket_gate
+
+
+    def bin_results(self, convol_coords):
         """
-        Probably the most logical approach would be to find a mapping correpsondence
-        where each (lat/lon) pair in the convol grid gets an index mapping it to its
-        corresponding slot in the GridInfo grid.
+        The bins will be organized according to a dictionary
+        of standardized strings
 
-        The naive way of approaching this is a nested loop over both grids, resulting
-        in an O(n^4) runtime. This will be computationally prohibitive, so we need to
-        use a better algorithm.
+        For example
+        key = "032_125"
         """
 
-        lats = grid_coords['lats']
-        lons = grid_coords['lons']
+        print(self.metadata)
+        print(self.grid_info)
 
-        convol_lats = convol_coords['lats']
-        convol_lons = convol_coords['lons']
-        convol_z = convol_coords['z_arr']
-        convol_dbz = self.convol.fields['total_power']['data']
+        self.bins = dict()
 
-        lon_0 = self.metadata.lon
-        lat_0 = self.metadata.lat
-        radar_coords = (lat_0, lon_0)
+        # The bucket size
 
-        grid_shape = lats.shape
-        convol_shape = convol_lats.shape
+        azim_bin_size = self.config["iris_settings"]["azim_precip_region"]
+        gate_bin_size = self.config["iris_settings"]["gate_precip_region"]
 
-        proj_distance = np.zeros(convol_shape, dtype=float)
+        azims = self.grid_info.azims
+        gates = self.grid_info.gates
 
+        num_azim_bins = azims // azim_bin_size
+        num_gate_bins = gates // gate_bin_size
+
+        rem_azim = azims % azim_bin_size
+        rem_gate = gates % gate_bin_size
+
+        print("rem_azim:", rem_azim)
+        print("rem_gate:", rem_gate)
+
+        for x in range(0, num_azim_bins):
+            for y in range(0, num_gate_bins):
+                current_key = self.get_key(x, y)
+                self.bins[current_key] = dict()
+                self.bins[current_key]['elevation'] = []
+                self.bins[current_key]['dbz'] = []
+
+        # Let's populate these bins with data points
+        convol_data = self.convol.fields['total_power']['data']
+        convol_shape = convol_data.shape
+        
         t0 = time.time()
 
+        min_height_km = 0.1
+        max_height_km = 4.0
+
+        print("Binning")
         for x in range(0, convol_shape[0]):
             for y in range(0, convol_shape[1]):
-                convol_coords = (convol_lats[x,y], convol_lons[x,y])
-                dist = geopy.distance.distance(radar_coords, convol_coords).km
-                proj_distance[x,y] = dist
+                distance = convol_coords['distance'][x,y]
+                elevation = convol_coords['z_km'][x,y]
+                azimuth = self.convol.azimuth['data'][x]
+                dbz = convol_data[x,y]
 
-        bugtracker.core.utils.arr_info(proj_distance, "distance")
+                # Decide whether to include:
+                if not isinstance(dbz, np.ma.core.MaskedConstant) and not np.isnan(dbz):
+                    if elevation < max_height_km and elevation > min_height_km:
+                        bucket_azim, bucket_gate = self.get_bucket(distance, azimuth)
+                        bin_key = self.get_key(bucket_azim, bucket_gate)
+                        self.bins[bin_key]['elevation'].append(elevation)
+                        self.bins[bin_key]['dbz'].append(dbz)
 
         t1 = time.time()
         elapsed = t1 - t0
-        print("Time for range:", elapsed)
+        print(f"Time for binning: {elapsed}")
+
+
+    def linregress(self):
+
+        slope_shape = (self.grid_info.azims, self.grid_info.gates)
+        self.slopes = np.zeros(slope_shape, dtype=float)
+        azim_bin_size = self.config["iris_settings"]["azim_precip_region"]
+        gate_bin_size = self.config["iris_settings"]["gate_precip_region"]
+        max_slope = self.config['iris_settings']['max_dbz_per_km']
+
+        invalid_values = 0
+
+        for key in self.bins:
+            elevation = self.bins[key]['elevation']
+            dbz = self.bins[key]['dbz']
+
+            key_pair = key.split("_")
+            bucket_azim_idx = int(key_pair[0])
+            bucket_gate_idx = int(key_pair[1])
+    
+            azim_min_idx = azim_bin_size * bucket_azim_idx
+            azim_max_idx = azim_bin_size * bucket_azim_idx + azim_bin_size
+            gate_min_idx = gate_bin_size * bucket_gate_idx
+            gate_max_idx = gate_bin_size * bucket_gate_idx + gate_bin_size
+
+            BUCKET_AZIMS = slice(azim_min_idx, azim_max_idx)
+            BUCKET_GATES = slice(gate_min_idx, gate_max_idx)
+
+
+
+            if len(dbz) >= 2:
+                slope, intercept, r_value, p_value, std_err = stats.linregress(elevation, dbz)
+                
+                if np.isnan(slope):
+                    self.slopes[BUCKET_AZIMS,BUCKET_GATES] = -100.0
+                else:
+                    self.slopes[BUCKET_AZIMS,BUCKET_GATES] = slope
+                
+                if slope > max_slope:
+                    self.filter_3d[:,BUCKET_AZIMS,BUCKET_GATES] = True
+                else:
+                    self.filter_3d[:,BUCKET_AZIMS,BUCKET_GATES] = False
+
+            else:
+                invalid_values += 1
+                self.filter_3d[:,BUCKET_AZIMS,BUCKET_GATES] = True
+                self.slopes[BUCKET_AZIMS,BUCKET_GATES] = -100.0
+        print("Invalid values:", invalid_values)
+
+
+    def plot_slopes(self):
+
+        if self.slopes is None:
+            raise ValueError("Slopes cannot be None")
+
+        grid_coords = bugtracker.core.utils.latlon(self.grid_info, self.metadata)
+        lats = grid_coords['lats']
+        lons = grid_coords['lons']
+        output_folder = os.path.join(self.config['plot_dir'], self.metadata.radar_id)
+        plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, output_folder, self.grid_info)
+
+        bugtracker.core.utils.arr_info(lats, "lats")
+        bugtracker.core.utils.arr_info(lons, "lons")
+        bugtracker.core.utils.arr_info(self.slopes, "slopes")
+
+        max_range = self.config['plot_settings']['max_range']
+        plotter.set_data(self.slopes, "gradient", self.metadata.scan_dt, self.metadata, max_range)
+        plotter.save_plot(min_value=-200.0, max_value=200.0)
 
 
     def projection(self):
@@ -172,12 +286,19 @@ class IrisPrecipFilter(Filter):
         grid that is used for the processing algorithm.
         """
 
-        grid_coords = bugtracker.core.utils.latlon(self.grid_info, self.metadata)
 
 
         convol_coords = self.get_convol_coords()
 
-        self.bin_results(grid_coords, convol_coords)
+        self.bin_results(convol_coords)
+        
+        t0 = time.time()
+        self.linregress()
+        t1 = time.time()
+
+        elapsed = t1 - t0
+        print("Regression time:", elapsed)
+
 
 
     def determine_angles(self, iris_set):
@@ -348,150 +469,25 @@ class PrecipFilter(Filter):
             raise ValueError(f"Incompatible azims: {azims}, {self.grid_info.azims}")
 
 
-    def determine_zone_slope(self, dbz_3d, clutter, angles, azim_zone, gate_zone):
+    def copy(self, source_filter):
         """
-        We will only use CONVOL scans for determining slopes
-        The following property can be used to exclude clutter from slope.
-        self.convol_clutter
-        """
-
-
-        azim_region = self.config['precip']['azim_region']
-        gate_region = self.config['precip']['gate_region']
-        
-        min_azim = azim_zone * azim_region
-        max_azim = (azim_zone + 1) * azim_region
-
-        min_gate = gate_zone * gate_region
-        max_gate = (gate_zone + 1) * gate_region
-
-        angle_list = []
-        dbz_list = []
-        height_list = []
-
-        # Above this threshold, we consider it rain.
-        max_dbz_per_km = -5.0
-
-        for x in range(0, len(angles)):
-            angle = angles[x]
-            zone_data = dbz_3d[x,min_azim:max_azim,min_gate:max_gate]
-            # Should be more OOP
-            zone_clutter = clutter[x,min_azim:max_azim,min_gate:max_gate]
-            zone_clutter_bool = zone_clutter.astype(bool)
-
-            if zone_data.shape != zone_clutter.shape:
-                raise ValueError("Incompatible zone shapes.")
-
-            zone_flat = list(zone_data.flatten())
-
-            zone_clutter_flat = list(zone_clutter_bool.flatten())
-
-            num_cells = len(zone_flat)
-            num_clutter = len(zone_clutter_flat)
-
-            if num_cells != num_clutter:
-                raise ValueError("Incompatible list lengths.")
-
-            for y in range(0, num_cells):
-                if not zone_clutter_flat[y]:
-                    dbz = zone_flat[y]
-                    if not isinstance(dbz, np.ma.core.MaskedConstant):
-                        angle_list.append(angle)
-                        dbz_list.append(dbz)
-                        # Making trig approximation h = x*tan(theta)
-                        # Note, distance must be in km, and theta must
-                        # be converted to radians.
-                        # TODO: Use builtin pyart methods.
-                        rad_angle = math.radians(angle)
-                        # Using midpoint approximation
-                        midpoint = int((min_gate + max_gate) / 2.0)
-                        # Convert to kilometers
-                        distance = midpoint * self.grid_info.gate_step * 0.001
-                        height = distance * math.tan(rad_angle)
-                        height_list.append(height)
-
-        if len(angle_list) != len(dbz_list):
-            raise ValueError("Zone slope error")
-
-        # If there is only data from one elevation angle, we cannot
-        # compute the slope.
-
-        angle_set = set(angle_list)
-        if len(angle_set) < 2:
-            return np.nan
-        else:
-            slope, intercept, r_value, p_value, std_err = stats.linregress(height_list, dbz_list)
-            return slope
-
-
-    def apply(self, dbz, clutter, angles):
-        """
-        What creates a lot of confusion is:
-        The precip filter is applied on a column-wide basis.
-        """
-
-        # First, check correspondence between dimensions
-
-        if len(angles) != self.filter_3d.shape[0]:
-            raise ValueError("Invalid number of angles")
-
-        if dbz.shape != self.filter_3d.shape:
-            raise ValueError("Input precipitation array has invalid dimensions.")
-
-        if clutter.shape != self.filter_3d.shape:
-            raise ValueError("Input clutter array has invalid dimensions.")
-
-        t0 = time.time()
-
-        azim_region = self.config['precip']['azim_region']
-        gate_region = self.config['precip']['gate_region']
-        max_slope = self.config['precip']['max_dbz_per_degree']
-
-        if self.grid_info.azims % azim_region != 0:
-            raise ValueError(f"Choose value of azim_region that divides {self.grid_info.azims} evenly.")
-
-        if self.grid_info.gates % gate_region != 0:
-            raise ValueError(f"Choose value of gate_region that divides {self.grid_info.gates} evenly")
-
-        azim_zones = self.grid_info.azims // azim_region
-        gate_zones = self.grid_info.gates // gate_region
-
-        for x in range(0, azim_zones):
-            for y in range(0, gate_zones):
-                slope = self.determine_zone_slope(dbz, clutter, angles, x, y)
-                if not np.isnan(slope) and slope > max_slope:
-                    min_azim = x * azim_region
-                    max_azim = (x + 1) * azim_region
-
-                    min_gate = y * gate_region
-                    max_gate = (y + 1) * gate_region
-
-                    self.filter_3d[:,min_azim:max_azim,min_gate:max_gate] = True
-
-        t1 = time.time()
-        print("Total time for precip filter:", t1 - t0)
-
-
-    def copy(self, target_filter):
-        """
-        Copy the results from one precip filter into another.
-        This is used for copying CONVOL filter into DOPVOL filters.
+        Copy from a source filter
         """
 
         filter_shape = self.filter_3d.shape
-        target_shape = target_filter.filter_3d.shape
+        source_shape = source_filter.filter_3d.shape
 
         if filter_shape[0] < 1:
             raise ValueError("Invalid source angles")
 
-        if filter_shape[1] != target_shape[1]:
+        if filter_shape[1] != source_shape[1]:
             raise ValueError("Invalid number of azims")
 
-        if filter_shape[2] != target_shape[2]:
+        if filter_shape[2] != source_shape[2]:
             raise ValueError("Invalid number of range gates")
 
-        first_level = self.filter_3d[0,:,:]
-        num_target_levels = target_shape[0]
+        first_level = source_filter.filter_3d[0,:,:]
+        num_levels = filter_shape[0]
 
-        for x in range(0, num_target_levels):
-            target_filter.filter_3d[x,:,:] = first_level[:,:]
+        for x in range(0, num_levels):
+            self.filter_3d[x,:,:] = first_level[:,:]
