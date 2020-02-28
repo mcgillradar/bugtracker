@@ -29,7 +29,139 @@ class OdimManager:
 
     def __init__(self, config, radar_id):
 
-        pass
+        self.config = config
+        self.radar_id = radar_id.lower()
+        self.odim_dir = self.config['input_dirs']['odim']
+
+        self.metadata = None
+        self.grid_info = None
+
+
+    def datetime_from_file(self, filepath):
+        """
+        Extracting the timestamp with the file (with validation)
+        """
+
+        basename = os.path.basename(filepath)
+        components = basename.split("_")
+        if len(components) < 2:
+            raise ValueError("Cannot split filename into components.")
+
+        datestamp = components[0] + components[1]
+        fmt = "%Y%m%d%H%M"
+
+        file_dt = datetime.datetime.strptime(basename, date_fmt)
+
+        return file_dt
+
+
+    def get_closest(self, target_dt):
+        """
+        Get the closest radar scan to the specified date,
+        and return an error if the closest is more than 30mins away
+        or if no input files are found.
+        """
+
+        """
+        Looking over how this is implemented in NEXRAD, I think there is a
+        much simpler way to do this.
+        """
+
+        return None
+
+
+    def get_range(self, start, end):
+        """
+        Return all ODIM_H5 radar files within the specified
+        date range.
+        """
+
+        radar_lower = self.radar_id.lower()
+        radar_upper = self.radar_id.upper()
+        glob_string = f"*{radar_lower}.h5"
+        search = os.path.join(self.nexrad_dir, radar_lower, glob_string)
+        all_files = glob.glob(search)
+        all_files.sort()
+
+        range_list = []
+
+        for input_file in all_files:
+            current_dt = self.datetime_from_file(input_file)
+            if start <= current_dt and current_dt <= end:
+                range_list.append(input_file)
+
+        for file in range_list:
+            if not os.path.isfile(file):
+                raise FileNotFoundError(f"File does not exist: {file}")
+
+        return range_list
+
+
+
+    def extract_metadata(self, odim_file):
+        """
+        Extracting metadata object from ODIM_H5 file
+        """
+
+        nexrad_handle = pyart.aux_io.read_odim_h5(nexrad_file)
+
+        radar_name = nexrad_handle.metadata['instrument_name']
+
+        # Do a lowercase comparison
+        if not bugtracker.core.utils.lower_compare(radar_name, self.radar_id):
+            raise ValueError(f"Radar ID does not match: {radar_name}, {self.radar_id}")
+
+        radar_id = self.radar_id
+
+        latitude = nexrad_handle.latitude['data'][0]
+        longitude = nexrad_handle.longitude['data'][0]
+
+        abs_lat = abs(latitude)
+        abs_lon = abs(longitude)
+
+        if abs_lat > 180.0:
+            raise ValueError(f"Invalid latitude: {latitude}")
+
+        if abs_lon > 360.0:
+            raise ValueError(f"Invalid longitude: {longitude}")
+
+        datestamp = nexrad_handle.time['units'].split(' ')[-1]
+        scan_dt = datetime.datetime.strptime(datestamp, "%Y-%m-%dT%H:%M:%SZ")
+
+        metadata = bugtracker.core.metadata.Metadata(radar_id, scan_dt, latitude, longitude, radar_name)
+        return metadata
+
+
+    def extract_grid(self, odim_file):
+
+        odim_handle = pyart.aux_io.read_odim_h5(odim_file)
+
+        gates = -1
+        azims = -1
+
+        azim_step = -1.0
+        azim_offset = -1.0
+
+        gate_step = odim_handle.range['meters_between_gates']
+        gate_offset = odim_handle.range['meters_to_center_of_first_gate']
+
+        grid_info = bugtracker.core.grid.GridInfo(gates, azims, gate_step, azim_step,
+                                                  azim_offset=azim_offset, gate_offset=gate_offset)
+
+        return grid_info
+
+
+
+    def populate(self, template_data):
+
+        template_file = self.get_closest(template_date)
+
+        if not os.path.isfile(template_file):
+            raise FileNotFoundError(template_file)
+
+        self.metadata = self.extract_metadata(template_file)
+        self.grid_info = self.extract_grid(template_file)
+
 
 
 class OdimData(ScanData):
