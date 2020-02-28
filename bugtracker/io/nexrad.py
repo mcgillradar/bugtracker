@@ -1,6 +1,6 @@
 """
 This file is part of Bugtracker
-Copyright (C) 2019  McGill Radar Group
+Copyright (C) 2020  McGill Radar Group
 
 Bugtracker is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
