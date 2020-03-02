@@ -17,8 +17,17 @@ along with Bugtracker.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
+import glob
+import datetime
+import math
+import time
 
+import numpy as np
 import pyart
+from scipy import interpolate
+
+import bugtracker.core.utils
+from bugtracker.io.scan import ScanData
 
 
 class OdimManager:
@@ -48,9 +57,10 @@ class OdimManager:
             raise ValueError("Cannot split filename into components.")
 
         datestamp = components[0] + components[1]
+
         fmt = "%Y%m%d%H%M"
 
-        file_dt = datetime.datetime.strptime(basename, date_fmt)
+        file_dt = datetime.datetime.strptime(datestamp, fmt)
 
         return file_dt
 
@@ -60,14 +70,36 @@ class OdimManager:
         Get the closest radar scan to the specified date,
         and return an error if the closest is more than 30mins away
         or if no input files are found.
+
+        Check +/- 1 hour range
         """
 
-        """
-        Looking over how this is implemented in NEXRAD, I think there is a
-        much simpler way to do this.
-        """
+        start = target_dt + datetime.timedelta(hours=-1)
+        end = target_dt + datetime.timedelta(hours=1)
 
-        return None
+        files_in_range = self.get_range(start, end)
+
+        if len(files_in_range) == 0:
+            raise FileNotFoundError("No files found within +/- 1 hour range of target datetime")
+
+        min_diff = 999999999
+        min_idx = -1
+
+        for x in range(0, len(files_in_range)):
+            current_file = files_in_range[x]
+            file_dt = self.datetime_from_file(current_file)
+            diff = file_dt - target_dt
+            total_seconds = abs(diff.total_seconds())
+            if total_seconds < min_diff:
+                min_diff = total_seconds
+                min_idx = x
+
+        closest = files_in_range[min_idx]
+
+        if not os.path.isfile(closest):
+            raise FileNotFoundError(closest)
+
+        return closest
 
 
     def get_range(self, start, end):
@@ -79,7 +111,7 @@ class OdimManager:
         radar_lower = self.radar_id.lower()
         radar_upper = self.radar_id.upper()
         glob_string = f"*{radar_lower}.h5"
-        search = os.path.join(self.nexrad_dir, radar_lower, glob_string)
+        search = os.path.join(self.odim_dir, radar_lower, glob_string)
         all_files = glob.glob(search)
         all_files.sort()
 
@@ -103,18 +135,14 @@ class OdimManager:
         Extracting metadata object from ODIM_H5 file
         """
 
-        nexrad_handle = pyart.aux_io.read_odim_h5(nexrad_file)
+        odim_handle = pyart.aux_io.read_odim_h5(odim_file)
 
-        radar_name = nexrad_handle.metadata['instrument_name']
-
-        # Do a lowercase comparison
-        if not bugtracker.core.utils.lower_compare(radar_name, self.radar_id):
-            raise ValueError(f"Radar ID does not match: {radar_name}, {self.radar_id}")
+        radar_name = odim_handle.metadata['instrument_name']
 
         radar_id = self.radar_id
 
-        latitude = nexrad_handle.latitude['data'][0]
-        longitude = nexrad_handle.longitude['data'][0]
+        latitude = odim_handle.latitude['data'][0]
+        longitude = odim_handle.longitude['data'][0]
 
         abs_lat = abs(latitude)
         abs_lon = abs(longitude)
@@ -125,7 +153,7 @@ class OdimManager:
         if abs_lon > 360.0:
             raise ValueError(f"Invalid longitude: {longitude}")
 
-        datestamp = nexrad_handle.time['units'].split(' ')[-1]
+        datestamp = odim_handle.time['units'].split(' ')[-1]
         scan_dt = datetime.datetime.strptime(datestamp, "%Y-%m-%dT%H:%M:%SZ")
 
         metadata = bugtracker.core.metadata.Metadata(radar_id, scan_dt, latitude, longitude, radar_name)
@@ -152,7 +180,7 @@ class OdimManager:
 
 
 
-    def populate(self, template_data):
+    def populate(self, template_date):
 
         template_file = self.get_closest(template_date)
 

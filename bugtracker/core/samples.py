@@ -116,3 +116,32 @@ def iris_set_wgj(config):
         raise ValueError("Cannot find sample IrisSet")
 
     return sample_set
+
+
+def nexrad_sample(config):
+    """
+    Return sample NexradData
+    """
+
+    raise NotImplementedError("NEXRAD")
+
+
+def odim_sample(config):
+    """
+    Return sample OdimData
+    """
+
+    template_date = "202002190300"
+    sample_date = "202002191630"
+    fmt = "%Y%m%d%H%M"
+
+    template_dt = datetime.datetime.strptime(template_date, fmt)
+    sample_dt = datetime.datetime.strptime(sample_date, fmt)
+
+    radar_id = "casbv"
+    manager = bugtracker.io.odim.OdimManager(config, radar_id)
+    manager.populate(template_dt)
+
+    odim_data = manager.get_closest(sample_dt)
+
+    return odim_data
