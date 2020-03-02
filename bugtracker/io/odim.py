@@ -164,8 +164,9 @@ class OdimManager:
 
         odim_handle = pyart.aux_io.read_odim_h5(odim_file)
 
-        gates = -1
-        azims = -1
+        # TODO: Placeholder values
+        gates = 10
+        azims = 36
 
         azim_step = -1.0
         azim_offset = -1.0
@@ -190,6 +191,23 @@ class OdimManager:
         self.metadata = self.extract_metadata(template_file)
         self.grid_info = self.extract_grid(template_file)
 
+
+    def extract_data(self, odim_file):
+
+        if self.metadata is None:
+            raise ValueError("metadata cannot be None")
+
+        if self.grid_info is None:
+            raise ValueError("grid_info cannot be None")
+
+        t0 = time.time()
+
+        odim_data = OdimData(odim_file, self.metadata, self.grid_info)
+        
+        t1 = time.time()
+        elapsed = t1 - t0
+        print(f"Time for data extraction: {elapsed:.3f} s")
+        return odim_data
 
 
 class OdimData(ScanData):
@@ -223,6 +241,17 @@ class OdimData(ScanData):
         rep += f"Dimensions: {self.reflectivity.shape}"
 
         return rep
+
+
+    def init_field(self):
+
+        # TODO: Choosing 5 for testing
+        num_vertical = 5
+
+        field_shape = (num_vertical,self.grid_info.azims, self.grid_info.gates)
+        field = np.zeros(field_shape, dtype=np.float32)
+
+        return field
 
 
     def check_field_dims(self, field_name):

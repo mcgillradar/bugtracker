@@ -142,6 +142,7 @@ def odim_sample(config):
     manager = bugtracker.io.odim.OdimManager(config, radar_id)
     manager.populate(template_dt)
 
-    odim_data = manager.get_closest(sample_dt)
+    odim_file = manager.get_closest(sample_dt)
+    odim_data = manager.extract_data(odim_file)
 
     return odim_data
