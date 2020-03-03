@@ -164,12 +164,14 @@ class OdimManager:
 
         odim_handle = pyart.aux_io.read_odim_h5(odim_file)
 
-        # TODO: Placeholder values
-        gates = 10
-        azims = 36
+        reflectivity_shape = odim_handle.fields['reflectivity']['data'].shape
 
-        azim_step = -1.0
-        azim_offset = -1.0
+        # TODO: Placeholder values
+        gates = reflectivity_shape[1]
+        azims = 720
+
+        azim_step = 0.5
+        azim_offset = 0.0
 
         gate_step = odim_handle.range['meters_between_gates']
         gate_offset = odim_handle.range['meters_to_center_of_first_gate']
@@ -227,11 +229,35 @@ class OdimData(ScanData):
 
         self.handle = pyart.aux_io.read_odim_h5(odim_file)
 
+        self.azims_per_lower = 720
+        self.azims_per_upper = 360
 
         self.dbz_unfiltered = self.init_field()
         self.velocity = self.init_field()
         self.cross_correlation_ratio = self.init_field()
         self.diff_reflectivity = self.init_field()
+
+        self.check_consistency()
+
+        input_dims = self.handle.fields['reflectivity']['data'].shape
+
+        num_lower_levels = self.get_num_lower()
+        num_upper_levels = self.get_num_upper()
+
+        self.dbz_elevs = self.get_scan_angles(num_lower_levels, num_upper_levels)
+
+        if len(self.dbz_elevs) != self.dbz_unfiltered.shape[0]:
+            raise ValueError(f"Inconsistent number of scan angles: {len(self.dbz_elevs)} != {self.dbz_unfiltered.shape[0]}")
+
+        self.check_levels(num_lower_levels, num_upper_levels, input_dims)
+
+        self.fill_lower(num_lower_levels)
+        self.fill_upper(num_lower_levels, num_upper_levels)
+
+        # This is not a "classification filter", but a preprocessing step
+        min_dbz_cutoff = self.config['odim_settings']['dbz_cutoff']
+        self.dbz_unfiltered = np.ma.masked_where(self.dbz_unfiltered < min_dbz_cutoff, self.dbz_unfiltered)
+
 
 
     def __str__(self):
@@ -243,15 +269,55 @@ class OdimData(ScanData):
         return rep
 
 
+    def get_num_lower(self):
+
+        """
+        Assumed to be a constant for ODIM sweeps.
+        """
+
+        return 6
+
+
+    def get_num_upper(self):
+
+        """
+        By convention, we will choose the 6 first levels of the
+        upper scans.
+        """
+
+
+        fixed_angles = self.handle.fixed_angle['data']
+
+        num_total_angles = len(fixed_angles)
+        upper_angles = num_total_angles - self.get_num_lower()
+
+        print("Upper angles:", upper_angles)
+
+        return upper_angles
+
+
     def init_field(self):
 
-        # TODO: Choosing 5 for testing
-        num_vertical = 5
+        num_lower_levels = self.get_num_lower()
+        num_upper_levels = self.get_num_upper()
+
+        num_vertical = num_lower_levels + num_upper_levels
 
         field_shape = (num_vertical,self.grid_info.azims, self.grid_info.gates)
         field = np.zeros(field_shape, dtype=np.float32)
 
+        print("field shape:", field_shape)
+
         return field
+
+
+    def get_scan_angles(self, num_lower_levels, num_upper_levels):
+
+        fixed_angle = self.handle.fixed_angle['data']
+        angle_list = list(fixed_angle)
+        print("ODIM angle list:", angle_list)
+
+        return angle_list
 
 
     def check_field_dims(self, field_name):
@@ -289,3 +355,44 @@ class OdimData(ScanData):
         self.check_field_dims("velocity")
         self.check_field_dims("cross_correlation_ratio")
         self.check_field_dims("differential_reflectivity")
+
+
+    def check_levels(self, num_lower, num_upper, input_shape):
+        """
+        A consistency check to make sure the num_lower/num_upper
+        detection worked correctly.
+        """
+
+        if len(input_shape) != 2:
+            raise ValueError("Error: 2-dimensional array expected.")
+
+
+    def fill_lower_field(self, field, field_key, theta, start_idx, vertical_level):
+        
+        pass
+
+
+    def fill_lower_scan(self, scan_idx, level):
+
+        pass
+
+
+    def fill_lower(self, num_lower):
+
+        pass
+
+
+    def fill_upper_field(self, field, field_key, theta, start_idx, vertical_level):
+
+        pass
+
+
+    def fill_upper_scan(self, upper_idx, new_idx, num_lower, num_upper):
+
+        pass
+
+
+    def fill_upper(self, num_lower, num_upper):
+
+        pass
+

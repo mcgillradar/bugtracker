@@ -266,7 +266,7 @@ class NexradData(ScanData):
         self.dbz_elevs = self.get_scan_angles(num_lower_levels, num_upper_levels)
 
         if len(self.dbz_elevs) != self.dbz_unfiltered.shape[0]:
-            raise ValueError(f"Inconsistent number of scan angles: {self.dbz_elevs} != {self.reflectivity.shape[0]}")
+            raise ValueError(f"Inconsistent number of scan angles: {len(self.dbz_elevs)} != {self.dbz_unfiltered.shape[0]}")
 
         self.check_levels(num_lower_levels, num_upper_levels, input_dims)
 
@@ -309,7 +309,9 @@ class NexradData(ScanData):
         num_lower_levels = self.get_num_lower()
         num_upper_levels = self.get_num_upper()
 
-        num_vertical = num_lower_levels // 2 + num_lower_levels
+        # For the NEXRAD case, the lower levels are scanned twice,
+        # and we only take the first one.
+        num_vertical = num_lower_levels // 2 + num_upper_levels
 
         field_shape = (num_vertical,self.grid_info.azims, self.grid_info.gates)
         field = np.zeros(field_shape, dtype=np.float32)

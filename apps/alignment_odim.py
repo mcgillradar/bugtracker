@@ -5,19 +5,34 @@ import pyart
 import bugtracker
 
 
-def main():
+def plot_alignment(radar_id, scan_dt):
 
     config = bugtracker.config.load("./bugtracker.json")
-
-    radar_id = "casvb"
     output_folder = os.path.join(config['plot_dir'], "alignment")
 
     plotter = bugtracker.plots.alignment.AlignmentPlotter(output_folder)
-    odim_data = bugtracker.core.samples.odim_sample(config)
+
+    odim_manager = bugtracker.io.odim.OdimManager(config, radar_id)
+    odim_manager.populate(scan_dt)
+    odim_filename = odim_manager.get_closest(scan_dt)
+    odim_data = odim_manager.extract_data(odim_filename)
 
     plotter.set_data(odim_data.handle, radar_id)
 
-    scan_dt = datetime.datetime(2020, 2, 19, 16)
     plotter.save_plot(scan_dt)
+
+
+def main():
+
+    radar_list = ["casbe", "casbv", "cascm", "caset",
+                  "casfw", "casla", "casmb", "casra",
+                  "casrf", "cassm", "cassr"]
+
+    scan_dt = datetime.datetime(2019, 11, 26, 14, 30)
+
+    for radar_id in radar_list:
+        print("Plotting:", radar_id)
+        plot_alignment(radar_id, scan_dt)
+
 
 main()
