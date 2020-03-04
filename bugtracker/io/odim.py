@@ -171,7 +171,7 @@ class OdimManager:
         azims = 720
 
         azim_step = 0.5
-        azim_offset = 0.0
+        azim_offset = 0.25
 
         gate_step = odim_handle.range['meters_between_gates']
         gate_offset = odim_handle.range['meters_to_center_of_first_gate']
@@ -228,6 +228,8 @@ class OdimData(ScanData):
             raise FileNotFoundError("Odim file does not exist")
 
         self.handle = pyart.aux_io.read_odim_h5(odim_file)
+        field_shape = self.handle.fields['reflectivity']['data'].shape
+        print("Field shape:", field_shape)
 
         self.azims_per_lower = 720
         self.azims_per_upper = 360
@@ -251,11 +253,18 @@ class OdimData(ScanData):
 
         self.check_levels(num_lower_levels, num_upper_levels, input_dims)
 
-        self.fill_lower(num_lower_levels)
-        self.fill_upper(num_lower_levels, num_upper_levels)
+        self.fill_lower(num_lower_levels, num_upper_levels)
+        self.fill_upper(num_upper_levels)
 
         # This is not a "classification filter", but a preprocessing step
         min_dbz_cutoff = self.config['odim_settings']['dbz_cutoff']
+        print("Min dbz cutoff:", min_dbz_cutoff)
+        print(type(min_dbz_cutoff))
+
+        print(type(self.dbz_unfiltered))
+        bugtracker.core.utils.arr_info(self.dbz_unfiltered, "unfiltered")
+        bugtracker.core.utils.arr_info(self.cross_correlation_ratio, "ratio")
+        #self.dbz_unfiltered = np.ma.masked_where(np.isnan(self.dbz_unfiltered), self.dbz_unfiltered)
         self.dbz_unfiltered = np.ma.masked_where(self.dbz_unfiltered < min_dbz_cutoff, self.dbz_unfiltered)
 
 
@@ -281,11 +290,16 @@ class OdimData(ScanData):
     def get_num_upper(self):
 
         """
-        By convention, we will choose the 6 first levels of the
-        upper scans.
+        For now, I think we can pick only the lower scans.
+        I can include the upper ones, but what is the purpose
+        of including them if they are out of the plane for
+        bugs?
+
+        For performance considerations I am settings these to
+        zero for now.
         """
 
-
+        """
         fixed_angles = self.handle.fixed_angle['data']
 
         num_total_angles = len(fixed_angles)
@@ -294,6 +308,9 @@ class OdimData(ScanData):
         print("Upper angles:", upper_angles)
 
         return upper_angles
+        """
+
+        return 0
 
 
     def init_field(self):
@@ -315,9 +332,15 @@ class OdimData(ScanData):
 
         fixed_angle = self.handle.fixed_angle['data']
         angle_list = list(fixed_angle)
+
+        # We want the angles to go from smallest to largest
+        # as a convention.
+        angle_list.reverse()
         print("ODIM angle list:", angle_list)
 
-        return angle_list
+        # Selecting only lower scans
+
+        return angle_list[0:self.get_num_lower()]
 
 
     def check_field_dims(self, field_name):
@@ -367,32 +390,86 @@ class OdimData(ScanData):
             raise ValueError("Error: 2-dimensional array expected.")
 
 
-    def fill_lower_field(self, field, field_key, theta, start_idx, vertical_level):
+    def fill_lower_field(self, field, field_key, start_idx, elev_idx):
         
-        pass
+        print("elev_idx:", elev_idx)
+
+        end_idx = start_idx + self.azims_per_lower
+
+        active_section = self.handle.fields[field_key]['data'][start_idx:end_idx,:]
+
+        if active_section.shape[0] != field.shape[1]:
+            raise ValueError("Incompatible azims")
+        if active_section.shape[1] != field.shape[2]:
+            raise ValueError("Incompatible gates")
+
+        field[elev_idx,:,:] = active_section[:,:]
 
 
-    def fill_lower_scan(self, scan_idx, level):
+    def fill_lower_scan(self, start_idx, elev_idx):
 
-        pass
-
-
-    def fill_lower(self, num_lower):
-
-        pass
+        self.fill_lower_field(self.dbz_unfiltered, "reflectivity", start_idx, elev_idx)
+        self.fill_lower_field(self.cross_correlation_ratio, "cross_correlation_ratio", start_idx, elev_idx)
+        self.fill_lower_field(self.velocity, "velocity", start_idx, elev_idx)
+        self.fill_lower_field(self.diff_reflectivity, "differential_reflectivity", start_idx, elev_idx)
 
 
-    def fill_upper_field(self, field, field_key, theta, start_idx, vertical_level):
+    def fill_lower(self, num_lower, num_upper):
 
-        pass
+        print("Filling lower fields")
+
+        upper_block = self.azims_per_upper * num_upper
+
+        for x in range(0, num_lower):
+            start_idx = upper_block + self.azims_per_lower * x
+            elev_idx = len(self.dbz_elevs) - (1 + x + num_upper)
+            current_angle = self.dbz_elevs[elev_idx]
+            self.fill_lower_scan(start_idx, elev_idx)
 
 
-    def fill_upper_scan(self, upper_idx, new_idx, num_lower, num_upper):
 
-        pass
+    def fill_upper_field(self, field, field_key, start_idx, elev_idx):
+
+        print("Elev idx:", elev_idx)
+
+        azims = self.azims_per_upper
+
+        for x_start in range(0, azims):
+            # Some modular arithmatic for wraparound
+            x_end = (x_start + 1) % azims
+            output_start = 2 * x_start
+            output_mid = output_start + 1
+
+            field_start = start_idx + x_start
+            field_end = start_idx + x_end
+
+            field_start_ray = self.handle.fields[field_key]['data'][field_start,:]
+            field_end_ray = self.handle.fields[field_key]['data'][field_end,:]
+
+            # Setting start first, no data manipulation required11
+            field[elev_idx,output_start,:] = field_end_ray[:]
+
+            # Setting midpoint, must average two arrays
+            field[elev_idx,output_mid,:] = (field_start_ray[:] + field_end_ray[:]) / 2.0
 
 
-    def fill_upper(self, num_lower, num_upper):
+    def fill_upper_scan(self, start_idx, elev_idx):
 
-        pass
+        self.fill_upper_field(self.dbz_unfiltered, "reflectivity", start_idx, elev_idx)
+        self.fill_upper_field(self.cross_correlation_ratio, "cross_correlation_ratio", start_idx, elev_idx)
+        self.fill_upper_field(self.velocity, "velocity", start_idx, elev_idx)
+        self.fill_upper_field(self.diff_reflectivity, "differential_reflectivity", start_idx, elev_idx)
 
+
+
+    def fill_upper(self, num_upper):
+
+        print("Filling upper fields")
+
+        for x in range(0, num_upper):
+            start_idx = self.azims_per_upper * x
+            elev_idx = len(self.dbz_elevs) - (1 + x)
+            current_angle = self.dbz_elevs[elev_idx]
+            print("start_idx:", start_idx)
+            print("current_angle:", current_angle)
+            self.fill_upper_scan(start_idx, elev_idx)

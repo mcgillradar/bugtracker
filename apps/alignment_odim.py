@@ -24,11 +24,15 @@ def plot_alignment(radar_id, scan_dt):
 
 def main():
 
+    """
     radar_list = ["casbe", "casbv", "cascm", "caset",
                   "casfw", "casla", "casmb", "casra",
                   "casrf", "cassm", "cassr"]
+    """
 
-    scan_dt = datetime.datetime(2019, 11, 26, 14, 30)
+    radar_list = ["casbv"]
+
+    scan_dt = datetime.datetime(2020, 2, 19, 16, 30)
 
     for radar_id in radar_list:
         print("Plotting:", radar_id)
