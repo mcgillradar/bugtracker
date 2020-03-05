@@ -50,10 +50,10 @@ def check_args(args):
     provided by argparse
     """
 
-    valid_stations = ['xam', 'wgj', 'kcbw']
+    #valid_stations = ['xam', 'wgj', 'kcbw']
 
-    if args.station.lower() not in valid_stations:
-        raise ValueError(f"Invalid station {args.station}")
+    #if args.station.lower() not in valid_stations:
+    #    raise ValueError(f"Invalid station {args.station}")
 
     valid_dtypes = ['iris', 'nexrad', 'odim']
 
@@ -147,7 +147,32 @@ def nexrad_tracker(args, config):
 
 def odim_tracker(args, config):
 
-    raise NotImplementedError(args.dtype)
+    date_format = "%Y%m%d%H%M"
+
+    # Filtering input arguments
+    station_id = args.station.strip().lower()
+    start_time = datetime.datetime.strptime(args.start, date_format)
+    end_time = start_time + datetime.timedelta(hours=args.data_hours)
+
+    # Initializing manager class
+    manager = bugtracker.io.odim.OdimManager(config, station_id)
+    manager.populate(start_time)
+
+    """
+    The ODIM manager uses a list of files, rather than the IrisSet
+    that is required for IRIS files. This is because it has a much simpler
+    file structure (1 file per scan)
+    """
+    odim_files = []
+
+    if args.data_hours == 0:
+        closest_file = manager.get_closest(start_time)
+        odim_files.append(closest_file)
+    else:
+        odim_files = manager.get_range(start_time, end_time)
+
+    processor = bugtracker.io.processor.OdimProcessor(manager)
+    processor.process_files(odim_files)
 
 
 def main():

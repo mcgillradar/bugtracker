@@ -213,13 +213,6 @@ class IrisOutput(BaseOutput):
         dset.close()
 
 
-class OdimOutput(BaseOutput):
-
-    def __init__(self, metadata, grid_info):
-
-        raise NotImplementedError("OdimOutput")
-
-
 class NexradOutput(BaseOutput):
 
     def __init__(self, metadata, grid_info):
@@ -283,6 +276,64 @@ class NexradOutput(BaseOutput):
         nc_ratio = dset.createVariable("cross_correlation_ratio", np.float32, ('dbz_elevs','azims','gates'))
 
         nc_spectrum[:,:,:] = self.spectrum_width[:,:,:]
+        nc_velocity[:,:,:] = self.velocity[:,:,:]
+        nc_ratio[:,:,:] = self.cross_correlation_ratio[:,:,:]
+
+        dset.close()
+
+
+class OdimOutput(BaseOutput):
+
+    def __init__(self, metadata, grid_info):
+
+        super().__init__(metadata, grid_info, "odim")
+
+
+    def populate(self, odim_data):
+        """
+        TODO: Keep filtered separate
+        """
+
+        output_shape = odim_data.dbz_unfiltered.shape
+        flattened_shape = (self.grid_info.azims, self.grid_info.gates)
+
+        self.dbz_filtered = odim_data.dbz_filtered[:,:,:]
+        self.dbz_unfiltered = odim_data.dbz_unfiltered[:,:,:]
+        self.joint_product = odim_data.joint_product[:,:]
+        self.dbz_elevs = odim_data.dbz_elevs[:]
+
+        self.velocity = odim_data.velocity[:,:,:]
+        self.cross_correlation_ratio = odim_data.cross_correlation_ratio[:,:,:]
+
+
+    def validate(self):
+
+        super().validate()
+
+
+    def write(self, filename):
+        """
+        Appends. File is created in super class.
+
+        Imporant to ensure file is not corrupted before
+        saving to netCDF4. If you are doing batch processing
+        of netCDF4, you may want to include a try/except block
+        to handle ValueError.
+        """
+
+        self.validate()
+
+        super().write(filename)
+
+        dset = nc.Dataset(filename, mode="a")
+
+        #self.spectrum_width = nexrad_data.spectrum_width
+        #self.velocity = nexrad_data.velocity
+        #self.cross_corrleation_ratio = nexrad_data.cross_correlation_ratio
+
+        nc_velocity = dset.createVariable("velocity", np.float32, ('dbz_elevs','azims','gates'))
+        nc_ratio = dset.createVariable("cross_correlation_ratio", np.float32, ('dbz_elevs','azims','gates'))
+
         nc_velocity[:,:,:] = self.velocity[:,:,:]
         nc_ratio[:,:,:] = self.cross_correlation_ratio[:,:,:]
 

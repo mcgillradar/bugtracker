@@ -143,6 +143,11 @@ class ParallelPlotter:
 
     def __init__(self, lats, lons, metadata, grid_info, scan_data, id_matrix):
 
+        print("lats:", type(lats))
+        print("lons:", type(lons))
+
+
+
         self.config = bugtracker.config.load("./bugtracker.json")
         self.lats = lats
         self.lons = lons
@@ -170,7 +175,7 @@ class ParallelPlotter:
             arglist = (plot_type, metadata, grid_info, self.config, lats, lons, idx, scan_data, id_matrix)
             args.append(arglist)
 
-        # Only one vertical level here (as it's all put into one level)
+        #Only one vertical level here (as it's all put into one level)
         joint_args = ("joint", metadata, grid_info, self.config, lats, lons, None, scan_data, None)
         args.append(joint_args)
 

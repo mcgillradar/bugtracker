@@ -511,23 +511,142 @@ class OdimProcessor(Processor):
     Processor for Odim H5 files (new Environment Canada format)
     """
 
-    def __init__(self, metadata, grid_info):
+    def __init__(self, manager):
 
-        super().__init__(metadata, grid_info)
-        raise NotImplementedError("OdimProcessor")
+        super().__init__(manager.metadata, manager.grid_info)
+        self.manager = manager
+        self.load_specific_calib()
+        self.verify_specific_calib()
 
 
     def load_specific_calib(self):
-        pass
+        """
+        Load the calibration file variables specific to
+        ODIM files.
+        """
+
+        calib_file = self.calib_file
+        dset = nc.Dataset(calib_file, mode='r')
+
+        self.angles = dset.variables['angles'][:]
+        self.clutter = dset.variables['clutter'][:,:,:]
+
+        dset.close()
 
 
     def verify_specific_calib(self):
-        pass
+        
+        num_angles = len(self.angles)
+
+        if num_angles <= 1:
+            raise ValueError("Not enough angles in calib")
+
+        azims = self.grid_info.azims
+        gates = self.grid_info.gates
+
+        calib_dim = (num_angles, azims, gates)
+
+        if self.clutter.shape != calib_dim:
+            raise ValueError(f"Invalid calib dimensions: {self.clutter.shape}")
 
 
-    def impose_filter(self):
-        pass
+    def filter_precip(self, precip_filter):
+        print("Filtering precip")
 
 
-    def set_joint_product(self):
-        pass
+    def impose_filter(self, odim_data, filter_joint):
+        """
+        Applying joint filter for odim data. Here 'raw' simply
+        indicates before any processing has occured.
+        """
+
+        raw_dbz_shape = odim_data.dbz_unfiltered.shape
+        raw_dbz_mask = np.ma.getmask(odim_data.dbz_unfiltered)
+        filter_mask = np.ma.mask_or(filter_joint, raw_dbz_mask)
+
+        odim_data.dbz_filtered = np.ma.array(odim_data.dbz_unfiltered, mask=filter_mask)
+
+        dbz_filtered_shape = odim_data.dbz_filtered.shape
+
+        if raw_dbz_shape != dbz_filtered_shape:
+            raise ValueError("Error in dbz array size")
+
+
+    def set_joint_product(self, odim_data):
+        """
+        Collapsing 3D dbz product into a 2D flat grid.
+        """
+
+        # Let's mask out anything over 30, first
+        bug_threshold = self.config['processing']['joint_cutoff']
+        final_dbz = np.ma.masked_where(odim_data.dbz_filtered >= bug_threshold, odim_data.dbz_filtered)
+
+        odim_data.joint_product = np.amax(final_dbz, axis=0)
+        print(type(odim_data.joint_product))
+        print("joint shape:", odim_data.joint_product.shape)
+
+
+    def process_file(self, odim_file):
+
+        print("Processing file:", odim_file)
+
+        t0 = time.time()
+
+        odim_data = self.manager.extract_data(odim_file)
+
+        t1 = time.time()
+
+        # We can reuse the NexradPrecipFilter code here, because for this
+        # specific processing step, the data structures are identical.
+        precip = bugtracker.core.precip.NexradPrecipFilter(self.metadata, self.grid_info, odim_data.dbz_elevs)
+        precip.apply(odim_data)
+
+        t2 = time.time()
+
+        # Combining ClutterFilter with PrecipFilter
+
+        clutter_bool = self.clutter.astype(bool)
+        filter_joint = np.logical_or(clutter_bool, precip.filter_3d)
+
+        t3 = time.time()
+
+        # modify the files based on filters
+        self.impose_filter(odim_data, filter_joint)
+
+        odim_datetime = self.manager.datetime_from_file(odim_file)
+        nc_filename = self.output_filename(odim_datetime)
+
+        self.set_joint_product(odim_data)
+
+        odim_output = bugtracker.io.models.OdimOutput(self.metadata, self.grid_info)
+        odim_output.populate(odim_data)
+        odim_output.validate()
+        odim_output.write(nc_filename)
+
+        t4 = time.time()
+
+        precip_bool = precip.filter_3d.astype(bool)
+
+        target_id = bugtracker.core.target_id.TargetId(odim_data.dbz_unfiltered, clutter_bool, precip_bool)
+        id_matrix = target_id.export_matrix()
+
+        odim_output.append_target_id(nc_filename, id_matrix)
+
+        t5 = time.time()
+
+        plot_queue = bugtracker.plots.parallel.ParallelPlotter(self.lats, self.lons, self.metadata, self.grid_info, odim_data, id_matrix)
+
+        t6 = time.time()
+
+        print(f"Fill grids, construct data: {(t1-t0):.3f} s")
+        print(f"Precip filter: {(t2-t1):.3f} s")
+        print(f"Combining filters: {(t3-t2):.3f} s")
+        print(f"Output product NETCDF4 {(t4-t3):.3f} s")
+        print(f"Target ID setup and export {(t5-t4):.3f} s")
+        print(f"Plotting radial graphs {(t6-t5):.3f} s")
+
+
+    def process_files(self, odim_files):
+
+        for odim_file in odim_files:
+            self.process_file(odim_file)
