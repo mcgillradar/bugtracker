@@ -365,6 +365,11 @@ class OdimData(ScanData):
 
         # check field dimensions
 
+        print("List of field keys:")
+
+        for key in self.handle.fields:
+            print(key)
+
         self.check_field_dims("reflectivity")
         self.check_field_dims("velocity")
         self.check_field_dims("cross_correlation_ratio")

@@ -474,8 +474,134 @@ class NexradController(Controller):
 
 class OdimController(Controller):
 
-    def __init__(self, metadata, grid_info):
+    def __init__(self, args, manager):
 
-        super().__init__(metadata, grid_info)
-        raise NotImplementedError("OdimH5 filetype not currently supported.")
+        super().__init__(args, manager.metadata, manager.grid_info)
+        self.config = bugtracker.config.load("./bugtracker.json")
+        # Using OdimManager for I/O processing
+        self.manager = manager
 
+        self.clutter = ClutterFilter(manager.metadata, manager.grid_info)
+
+
+    def init_angles(self, odim_file):
+        """
+        Getting the target angles for each scan level from the first
+        file in the sequence.
+        """
+        odim_data = self.manager.extract_data(odim_file)
+        self.angles = odim_data.dbz_elevs
+        print("OdimController angle init:", self.angles)
+        self.clutter.setup(self.angles)
+
+
+    def set_calib_data(self, calib_files):
+
+        self.calib_files = calib_files
+
+        if len(calib_files) < 1:
+            raise ValueError("Invalid number of calib files")
+
+        self.init_angles(calib_files[0])
+
+
+    def count_instances(self, odim_file):
+        """
+        Takes in an Odim file and counts up all instances
+        above a threshold, adding to instances counters.
+        """
+
+        odim_data = self.manager.extract_data(odim_file)
+
+        dbz_threshold = self.config['clutter']['dbz_threshold']
+        clutter_dims = self.clutter.get_dims()
+
+        if odim_data.dbz_unfiltered.shape != clutter_dims:
+            raise ValueError(f"Incompatible shape: {clutter_dims}")
+
+        clutter_above = odim_data.dbz_unfiltered > dbz_threshold
+
+        clutter_above = clutter_above.filled(fill_value=False)
+
+        self.clutter_instances = self.clutter_instances + clutter_above.astype(int)
+
+
+    def print_levels(self, odim_file):
+
+        odim_data = self.manager.extract_data(odim_file)
+
+        ref = odim_data.handle.fields['reflectivity']['data'].shape
+
+        print("Reflectivity shape:", ref)
+
+
+    def create_masks(self, threshold):
+        """
+        Creating clutter mask from ODIM_H5 input dataset
+        """
+
+        clutter_dims = self.clutter.get_dims()
+
+        # Counters for number of hits above threshold
+        self.clutter_instances = np.zeros(clutter_dims, dtype=int)
+
+        num_timeseries = len(self.calib_files)
+        if num_timeseries == 0:
+            raise ValueError("No files in calibration set.")
+
+        for calib_file in self.calib_files:
+            print("Calib file processing:", calib_file)
+            self.count_instances(calib_file)
+
+        # Normalization
+        self.norm_clutter = self.clutter_instances / float(num_timeseries)
+
+        bugtracker.core.utils.arr_info(self.clutter_instances, "clutter_instances")
+        bugtracker.core.utils.arr_info(self.norm_clutter, "norm_clutter")
+
+        prev_shape_clutter = self.clutter.filter_3d.shape
+
+        print("Coverage threshold:", threshold)
+
+        self.clutter.filter_3d = self.norm_clutter >= threshold
+
+        post_shape_clutter = self.clutter.filter_3d.shape
+
+        bugtracker.core.utils.arr_info(self.clutter.filter_3d, "clutter")
+
+        if prev_shape_clutter != post_shape_clutter:
+            raise ValueError(f"Incompatible shapes: {prev_shape_clutter} != {post_shape_clutter}")
+
+
+    def save_masks(self):
+        """
+        Geometry/clutter/dbz masks are Iris-specific
+        This could probably be refactored to avoid repeating
+        """
+
+        angles = self.angles
+        num_angles = len(angles)
+
+        print("Num angles:", num_angles)
+
+        output_file = bugtracker.core.cache.calib_filepath(self.metadata, self.grid_info)
+
+        azims = self.grid_info.azims
+        gates = self.grid_info.gates
+
+        dset = nc.Dataset(output_file, mode="r+")
+        dset.createDimension("angles", num_angles)
+
+        clutter_dims = ('angles', 'azims', 'gates')
+        nc_angles = dset.createVariable("angles", float, ('angles'))
+        nc_angles[:] = angles[:]
+
+        # Unsigned integer 1 bytes, to save space.
+        # 0 corresponds to no mask, 1 corresponds to mask (Filter)
+        nc_clutter = dset.createVariable("clutter", 'u1', clutter_dims)
+
+        print("clutter shape:", self.clutter.filter_3d.shape)
+
+        nc_clutter[:,:,:] = self.clutter.filter_3d[:,:,:]
+
+        dset.close()
