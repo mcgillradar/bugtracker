@@ -105,7 +105,7 @@ def get_srtm(metadata, grid_info):
 
 def plot_calib_graph(args, metadata, radial_plotter, plot_type, angle, data):
     time_start = datetime.datetime.strptime(args.timestamp, "%Y%m%d%H%M")
-    label = f"clutter_{plot_type}_{angle}_"
+    label = f"clutter_{plot_type}_{angle:.2f}_"
     max_range = 150
     print("Plot label:", label)
     print("data", data)
@@ -208,7 +208,48 @@ def plot_calib_nexrad(args, config):
 
 def plot_calib_odim(args, config):
 
-    raise NotImplementedError("Odim plotting not implemented")
+    date_format = "%Y%m%d%H%M"
+
+    # Filtering input arguments
+    station_id = args.station.strip().lower()
+    start_time = datetime.datetime.strptime(args.timestamp, date_format)
+
+    # Initializing manager class
+    manager = bugtracker.io.odim.OdimManager(config, station_id)
+    manager.populate(start_time)
+
+    metadata = manager.metadata
+    grid_info = manager.grid_info
+
+    nc_file = bugtracker.core.cache.calib_filepath(metadata, grid_info)
+
+    plot_dir = config['plot_dir']
+    plot_subdir = os.path.join(plot_dir, "calib_plots")
+
+    if not os.path.isdir(plot_dir):
+        os.mkdir(plot_dir)
+
+    if not os.path.isdir(plot_subdir):
+        os.mkdir(plot_subdir)
+
+    dset = nc.Dataset(nc_file, mode='r')
+
+    clutter = dset.variables['clutter'][:,:,:]
+    clutter_angles = dset.variables['angles']
+
+    lats = dset.variables['lats'][:,:]
+    lons = dset.variables['lons'][:,:]
+
+    radial_plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, plot_subdir, grid_info)
+
+    print("Plotting clutter")
+    for x in range(0, len(clutter_angles)):
+        angle = clutter_angles[x]
+        slice_data = clutter[x,:,:]
+        plot_calib_graph(args, metadata, radial_plotter, "odim", angle, slice_data)
+
+    dset.close()
+
 
 def plot_calib_graphs(args, config):
     """

@@ -229,7 +229,6 @@ class OdimData(ScanData):
 
         self.handle = pyart.aux_io.read_odim_h5(odim_file)
         field_shape = self.handle.fields['reflectivity']['data'].shape
-        print("Field shape:", field_shape)
 
         self.azims_per_lower = 720
         self.azims_per_upper = 360
@@ -257,13 +256,7 @@ class OdimData(ScanData):
 
         # This is not a "classification filter", but a preprocessing step
         min_dbz_cutoff = self.config['odim_settings']['dbz_cutoff']
-        print("Min dbz cutoff:", min_dbz_cutoff)
-        print(type(min_dbz_cutoff))
 
-        print(type(self.dbz_unfiltered))
-        bugtracker.core.utils.arr_info(self.dbz_unfiltered, "unfiltered")
-        bugtracker.core.utils.arr_info(self.cross_correlation_ratio, "ratio")
-        
         self.dbz_unfiltered = np.ma.masked_where(self.dbz_unfiltered < min_dbz_cutoff, self.dbz_unfiltered)
 
 
@@ -299,8 +292,6 @@ class OdimData(ScanData):
 
         num_total_angles = len(fixed_angles)
         upper_angles = num_total_angles - self.get_num_lower()
-
-        print("Upper angles:", upper_angles)
 
         return upper_angles
 
@@ -365,11 +356,6 @@ class OdimData(ScanData):
 
         # check field dimensions
 
-        print("List of field keys:")
-
-        for key in self.handle.fields:
-            print(key)
-
         self.check_field_dims("reflectivity")
         self.check_field_dims("velocity")
         self.check_field_dims("cross_correlation_ratio")
@@ -387,8 +373,6 @@ class OdimData(ScanData):
 
 
     def fill_lower_field(self, field, field_key, start_idx, elev_idx):
-        
-        print("elev_idx:", elev_idx)
 
         end_idx = start_idx + self.azims_per_lower
 
@@ -411,8 +395,6 @@ class OdimData(ScanData):
 
 
     def fill_lower(self, num_lower, num_upper):
-
-        print("Filling lower fields")
 
         upper_block = self.azims_per_upper * num_upper
         total_elevs = num_lower + num_upper
