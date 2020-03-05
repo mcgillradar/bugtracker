@@ -21,6 +21,8 @@ def plot_alignment(radar_id, scan_dt):
 
     plotter.save_plot(scan_dt)
 
+    print("Output shape:", odim_data.dbz_unfiltered.shape)
+
 
 def main():
 

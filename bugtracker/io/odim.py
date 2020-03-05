@@ -254,7 +254,6 @@ class OdimData(ScanData):
         self.check_levels(num_lower_levels, num_upper_levels, input_dims)
 
         self.fill_lower(num_lower_levels, num_upper_levels)
-        self.fill_upper(num_upper_levels)
 
         # This is not a "classification filter", but a preprocessing step
         min_dbz_cutoff = self.config['odim_settings']['dbz_cutoff']
@@ -264,7 +263,7 @@ class OdimData(ScanData):
         print(type(self.dbz_unfiltered))
         bugtracker.core.utils.arr_info(self.dbz_unfiltered, "unfiltered")
         bugtracker.core.utils.arr_info(self.cross_correlation_ratio, "ratio")
-        #self.dbz_unfiltered = np.ma.masked_where(np.isnan(self.dbz_unfiltered), self.dbz_unfiltered)
+        
         self.dbz_unfiltered = np.ma.masked_where(self.dbz_unfiltered < min_dbz_cutoff, self.dbz_unfiltered)
 
 
@@ -294,12 +293,8 @@ class OdimData(ScanData):
         I can include the upper ones, but what is the purpose
         of including them if they are out of the plane for
         bugs?
-
-        For performance considerations I am settings these to
-        zero for now.
         """
 
-        """
         fixed_angles = self.handle.fixed_angle['data']
 
         num_total_angles = len(fixed_angles)
@@ -308,17 +303,13 @@ class OdimData(ScanData):
         print("Upper angles:", upper_angles)
 
         return upper_angles
-        """
-
-        return 0
 
 
     def init_field(self):
 
         num_lower_levels = self.get_num_lower()
-        num_upper_levels = self.get_num_upper()
 
-        num_vertical = num_lower_levels + num_upper_levels
+        num_vertical = num_lower_levels
 
         field_shape = (num_vertical,self.grid_info.azims, self.grid_info.gates)
         field = np.zeros(field_shape, dtype=np.float32)
@@ -419,57 +410,10 @@ class OdimData(ScanData):
         print("Filling lower fields")
 
         upper_block = self.azims_per_upper * num_upper
+        total_elevs = num_lower + num_upper
 
         for x in range(0, num_lower):
             start_idx = upper_block + self.azims_per_lower * x
-            elev_idx = len(self.dbz_elevs) - (1 + x + num_upper)
+            elev_idx = total_elevs - (1 + x + num_upper)
             current_angle = self.dbz_elevs[elev_idx]
             self.fill_lower_scan(start_idx, elev_idx)
-
-
-
-    def fill_upper_field(self, field, field_key, start_idx, elev_idx):
-
-        print("Elev idx:", elev_idx)
-
-        azims = self.azims_per_upper
-
-        for x_start in range(0, azims):
-            # Some modular arithmatic for wraparound
-            x_end = (x_start + 1) % azims
-            output_start = 2 * x_start
-            output_mid = output_start + 1
-
-            field_start = start_idx + x_start
-            field_end = start_idx + x_end
-
-            field_start_ray = self.handle.fields[field_key]['data'][field_start,:]
-            field_end_ray = self.handle.fields[field_key]['data'][field_end,:]
-
-            # Setting start first, no data manipulation required11
-            field[elev_idx,output_start,:] = field_end_ray[:]
-
-            # Setting midpoint, must average two arrays
-            field[elev_idx,output_mid,:] = (field_start_ray[:] + field_end_ray[:]) / 2.0
-
-
-    def fill_upper_scan(self, start_idx, elev_idx):
-
-        self.fill_upper_field(self.dbz_unfiltered, "reflectivity", start_idx, elev_idx)
-        self.fill_upper_field(self.cross_correlation_ratio, "cross_correlation_ratio", start_idx, elev_idx)
-        self.fill_upper_field(self.velocity, "velocity", start_idx, elev_idx)
-        self.fill_upper_field(self.diff_reflectivity, "differential_reflectivity", start_idx, elev_idx)
-
-
-
-    def fill_upper(self, num_upper):
-
-        print("Filling upper fields")
-
-        for x in range(0, num_upper):
-            start_idx = self.azims_per_upper * x
-            elev_idx = len(self.dbz_elevs) - (1 + x)
-            current_angle = self.dbz_elevs[elev_idx]
-            print("start_idx:", start_idx)
-            print("current_angle:", current_angle)
-            self.fill_upper_scan(start_idx, elev_idx)

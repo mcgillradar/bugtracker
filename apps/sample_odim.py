@@ -47,8 +47,10 @@ def plot_sample(radar_id, scan_dt):
 
     for x in range(0, len(elevs)):
         current_elev = elevs[x]
-        plotter.set_data(odim_data.dbz_unfiltered[x,:,:], f"dbz_{current_elev}", scan_dt, metadata, 200.0)
+        plotter.set_data(odim_data.dbz_unfiltered[x,:,:], f"dbz_{current_elev:2f}", scan_dt, metadata, 200.0)
         plotter.save_plot(min_value=-30, max_value=50.0)
+
+    print("Output shape:", odim_data.dbz_unfiltered.shape)
 
 
 def main():
