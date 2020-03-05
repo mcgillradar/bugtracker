@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os
+import pickle
 import time
 import multiprocessing as mp
 
@@ -135,6 +136,11 @@ def plot_joint_product(plotter, metadata, config, scan_data):
     plotter.save_plot(min_value=-15.0, max_value=40.0)
 
 
+def pickler(python_obj):
+
+    test_bytes = pickle.dumps(python_obj)
+
+
 class ParallelPlotter:
     """
     multiprocessing.Pool based class that allows mupliple plots to
@@ -142,11 +148,6 @@ class ParallelPlotter:
     """
 
     def __init__(self, lats, lons, metadata, grid_info, scan_data, id_matrix):
-
-        print("lats:", type(lats))
-        print("lons:", type(lons))
-
-
 
         self.config = bugtracker.config.load("./bugtracker.json")
         self.lats = lats

@@ -222,7 +222,7 @@ class OdimData(ScanData):
 
         scan_dt = metadata.scan_dt
 
-        super().__init__(metadata, grid_info, datetime)
+        super().__init__(metadata, grid_info, scan_dt)
 
         if not os.path.isfile(odim_file):
             raise FileNotFoundError("Odim file does not exist")
