@@ -296,14 +296,43 @@ def run_nexrad_calib(args, config):
     calib_controller.set_grids(calib_grid)
     calib_controller.set_calib_data(calib_files)
     calib_controller.create_masks(threshold)
-    #calib_controller.print_masks()
     calib_controller.save()
     calib_controller.save_masks()
 
 
-def run_odim_calib(args, config, metadata, grid_info):
+def run_odim_calib(args, config):
 
-    raise NotImplementedError("ODIM_H5")
+    date_format = "%Y%m%d%H%M"
+
+    # Filtering input arguments
+    station_id = args.station.strip().lower()
+    start_time = datetime.datetime.strptime(args.timestamp, date_format)
+    end_time = start_time + datetime.timedelta(hours=args.data_hours)
+
+    start_string = start_time.strftime(date_format)
+    end_string = end_time.strftime(date_format)
+    print(f"ODIM calibration time range {start_string}-{end_string}")
+
+    # Initializing manager class
+    manager = bugtracker.io.odim.OdimManager(config, station_id)
+    manager.populate(start_time)
+
+    calib_grid = get_srtm(manager.metadata, manager.grid_info)
+
+    calib_files = manager.get_range(start_time, end_time)
+
+    for calib_file in calib_files:
+        if not os.path.isfile(calib_file):
+            raise FileNotFoundError(calib_file)
+
+    threshold = config['clutter']['coverage_threshold']
+
+    calib_controller = bugtracker.calib.calib.OdimController(args, manager)
+    calib_controller.set_grids(calib_grid)
+    calib_controller.set_calib_data(calib_files)
+    calib_controller.create_masks(threshold)
+    calib_controller.save()
+    calib_controller.save_masks()
 
 
 def main():

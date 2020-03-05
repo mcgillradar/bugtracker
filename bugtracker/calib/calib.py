@@ -337,14 +337,6 @@ class IrisController(Controller):
         dset.close()
 
 
-class OdimController(Controller):
-
-    def __init__(self, metadata, grid_info):
-
-        super().__init__(metadata, grid_info)
-        raise NotImplementedError("OdimH5 filetype not currently supported.")
-
-
 class NexradController(Controller):
 
     def __init__(self, args, manager):
@@ -478,3 +470,12 @@ class NexradController(Controller):
         nc_clutter[:,:,:] = self.clutter.filter_3d[:,:,:]
 
         dset.close()
+
+
+class OdimController(Controller):
+
+    def __init__(self, metadata, grid_info):
+
+        super().__init__(metadata, grid_info)
+        raise NotImplementedError("OdimH5 filetype not currently supported.")
+
