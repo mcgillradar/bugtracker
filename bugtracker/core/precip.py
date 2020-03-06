@@ -469,25 +469,150 @@ class PrecipFilter(Filter):
             raise ValueError(f"Incompatible azims: {azims}, {self.grid_info.azims}")
 
 
-    def copy(self, source_filter):
+    def determine_zone_slope(self, dbz_3d, clutter, angles, azim_zone, gate_zone):
         """
-        Copy from a source filter
+        We will only use CONVOL scans for determining slopes
+        The following property can be used to exclude clutter from slope.
+        self.convol_clutter
+        """
+
+
+        azim_region = self.config['precip']['azim_region']
+        gate_region = self.config['precip']['gate_region']
+        
+        min_azim = azim_zone * azim_region
+        max_azim = (azim_zone + 1) * azim_region
+
+        min_gate = gate_zone * gate_region
+        max_gate = (gate_zone + 1) * gate_region
+
+        angle_list = []
+        dbz_list = []
+        height_list = []
+
+        # Above this threshold, we consider it rain.
+        max_dbz_per_km = -5.0
+
+        for x in range(0, len(angles)):
+            angle = angles[x]
+            zone_data = dbz_3d[x,min_azim:max_azim,min_gate:max_gate]
+            # Should be more OOP
+            zone_clutter = clutter[x,min_azim:max_azim,min_gate:max_gate]
+            zone_clutter_bool = zone_clutter.astype(bool)
+
+            if zone_data.shape != zone_clutter.shape:
+                raise ValueError("Incompatible zone shapes.")
+
+            zone_flat = list(zone_data.flatten())
+
+            zone_clutter_flat = list(zone_clutter_bool.flatten())
+
+            num_cells = len(zone_flat)
+            num_clutter = len(zone_clutter_flat)
+
+            if num_cells != num_clutter:
+                raise ValueError("Incompatible list lengths.")
+
+            for y in range(0, num_cells):
+                if not zone_clutter_flat[y]:
+                    dbz = zone_flat[y]
+                    if not isinstance(dbz, np.ma.core.MaskedConstant):
+                        angle_list.append(angle)
+                        dbz_list.append(dbz)
+                        # Making trig approximation h = x*tan(theta)
+                        # Note, distance must be in km, and theta must
+                        # be converted to radians.
+                        # TODO: Use builtin pyart methods.
+                        rad_angle = math.radians(angle)
+                        # Using midpoint approximation
+                        midpoint = int((min_gate + max_gate) / 2.0)
+                        # Convert to kilometers
+                        distance = midpoint * self.grid_info.gate_step * 0.001
+                        height = distance * math.tan(rad_angle)
+                        height_list.append(height)
+
+        if len(angle_list) != len(dbz_list):
+            raise ValueError("Zone slope error")
+
+        # If there is only data from one elevation angle, we cannot
+        # compute the slope.
+
+        angle_set = set(angle_list)
+        if len(angle_set) < 2:
+            return np.nan
+        else:
+            slope, intercept, r_value, p_value, std_err = stats.linregress(height_list, dbz_list)
+            return slope
+
+
+    def apply(self, dbz, clutter, angles):
+        """
+        What creates a lot of confusion is:
+        The precip filter is applied on a column-wide basis.
+        """
+
+        # First, check correspondence between dimensions
+
+        if len(angles) != self.filter_3d.shape[0]:
+            raise ValueError("Invalid number of angles")
+
+        if dbz.shape != self.filter_3d.shape:
+            raise ValueError("Input precipitation array has invalid dimensions.")
+
+        if clutter.shape != self.filter_3d.shape:
+            raise ValueError("Input clutter array has invalid dimensions.")
+
+        t0 = time.time()
+
+        azim_region = self.config['precip']['azim_region']
+        gate_region = self.config['precip']['gate_region']
+        max_slope = self.config['precip']['max_dbz_per_km']
+
+        if self.grid_info.azims % azim_region != 0:
+            raise ValueError(f"Choose value of azim_region that divides {self.grid_info.azims} evenly.")
+
+        if self.grid_info.gates % gate_region != 0:
+            raise ValueError(f"Choose value of gate_region that divides {self.grid_info.gates} evenly")
+
+        azim_zones = self.grid_info.azims // azim_region
+        gate_zones = self.grid_info.gates // gate_region
+
+        for x in range(0, azim_zones):
+            for y in range(0, gate_zones):
+                slope = self.determine_zone_slope(dbz, clutter, angles, x, y)
+                if not np.isnan(slope) and slope > max_slope:
+                    min_azim = x * azim_region
+                    max_azim = (x + 1) * azim_region
+
+                    min_gate = y * gate_region
+                    max_gate = (y + 1) * gate_region
+
+                    self.filter_3d[:,min_azim:max_azim,min_gate:max_gate] = True
+
+        t1 = time.time()
+        print("Total time for precip filter:", t1 - t0)
+
+
+    def copy(self, target_filter):
+        """
+        Copy the results from one precip filter into another.
+        This is used for copying CONVOL filter into DOPVOL filters.
         """
 
         filter_shape = self.filter_3d.shape
-        source_shape = source_filter.filter_3d.shape
+        target_shape = target_filter.filter_3d.shape
 
         if filter_shape[0] < 1:
             raise ValueError("Invalid source angles")
 
-        if filter_shape[1] != source_shape[1]:
+        if filter_shape[1] != target_shape[1]:
             raise ValueError("Invalid number of azims")
 
-        if filter_shape[2] != source_shape[2]:
+        if filter_shape[2] != target_shape[2]:
             raise ValueError("Invalid number of range gates")
 
-        first_level = source_filter.filter_3d[0,:,:]
-        num_levels = filter_shape[0]
+        first_level = self.filter_3d[0,:,:]
+        num_target_levels = target_shape[0]
 
-        for x in range(0, num_levels):
-            self.filter_3d[x,:,:] = first_level[:,:]
+        for x in range(0, num_target_levels):
+            target_filter.filter_3d[x,:,:] = first_level[:,:]
