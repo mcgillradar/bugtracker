@@ -36,6 +36,7 @@ import geopy.distance
 import netCDF4 as nc
 
 
+
 class RadialPlotter():
 
     """
@@ -63,15 +64,16 @@ class RadialPlotter():
         """
 
         #TODO: Don't hard-code these bounds
+
         major_ticks_lat = np.arange(35, 60, 1)
         minor_ticks_lat = np.arange(35, 60, 0.2)
         major_ticks_lon = np.arange(-140, -60, 1.0)
         minor_ticks_lon = np.arange(-140, -60, 0.2)
 
-        self.ax.set_xticks(major_ticks_lon)
-        self.ax.set_xticks(minor_ticks_lon, minor=True)
-        self.ax.set_yticks(major_ticks_lat)
-        self.ax.set_yticks(minor_ticks_lat, minor=True)
+        self.ax.set_xticks(ticks=major_ticks_lon)
+        self.ax.set_xticks(ticks=minor_ticks_lon, minor=True)
+        self.ax.set_yticks(ticks=major_ticks_lat)
+        self.ax.set_yticks(ticks=minor_ticks_lat, minor=True)
 
         self.ax.grid(which='minor', alpha=0.2)
         self.ax.grid(which='major', alpha=0.5)
@@ -88,8 +90,6 @@ class RadialPlotter():
 
         min_data = min_value
         max_data = max_value
-        
-        print("min_data:", min_data, "max_data:", max_data)
 
         # Number of distinct color levels
         gradations = 22
@@ -103,9 +103,6 @@ class RadialPlotter():
         m.set_clim(min_data, max_data)
         cbar = plt.colorbar(m, boundaries=np.arange(min_data, max_data, gradation_step))
         cbar.ax.set_ylabel(self.label)
-        print("Type CS2:", type(CS2))
-        print("Type m:", type(m))
-        print("Type cbar:", type(cbar))
 
 
 
@@ -224,8 +221,6 @@ class RadialPlotter():
         self.ax = plt.axes(projection=ccrs.PlateCarree(), aspect=aspect)
         self.ax.set_xlabel('Longitude')
         self.ax.set_ylabel('Latitude')
-
-        print("ax type:", type(self.ax))
 
         self._set_grid()
         self._set_contours(min_value=min_value, max_value=max_value)

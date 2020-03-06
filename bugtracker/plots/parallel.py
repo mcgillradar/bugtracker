@@ -86,7 +86,6 @@ def plot_level(plotter, metadata, config, scan_data, dbz_idx, filtered=True):
 
     max_range = config["plot_settings"]["max_range"]
     num_elevs = len(scan_data.dbz_elevs)
-    print("angles:", scan_data.dbz_elevs)
 
     prefix = None
     dbz_field = None

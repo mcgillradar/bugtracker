@@ -82,7 +82,6 @@ class IrisPrecipFilter(Filter):
         x_arr, y_arr, z_arr = pyart.core.antenna_to_cartesian(augmented_ranges, augmented_azims, augmented_elevs)
 
         distance_arr = np.sqrt(np.square(x_arr) + np.square(y_arr))
-        bugtracker.core.utils.arr_info(distance_arr, "distance_arr")
 
         lon_0 = self.metadata.lon
         lat_0 = self.metadata.lat
@@ -92,8 +91,6 @@ class IrisPrecipFilter(Filter):
 
         lons, lats = pyart.core.cartesian_to_geographic_aeqd(x_arr, y_arr, lon_0, lat_0)
 
-        bugtracker.core.utils.arr_info(lons, "convol_lons")
-        bugtracker.core.utils.arr_info(lats, "convol_lats")
 
         # Convert to polar
 
@@ -365,12 +362,6 @@ class NexradPrecipFilter(Filter):
             plotter.set_data(nexrad_data.cross_correlation_ratio[x,:,:], f"{current_elev}_correlation", nexrad_data.datetime, self.metadata, max_range)
             plotter.save_plot(min_value=0.2, max_value=1.0)
 
-            print("Current angle:", current_elev)
-
-            bugtracker.core.utils.arr_info(dr_linear[x,:,:], "dr_linear")
-            bugtracker.core.utils.arr_info(nexrad_data.diff_reflectivity[x,:,:], "diff_reflect")
-            bugtracker.core.utils.arr_info(nexrad_data.cross_correlation_ratio[x,:,:], "correlation")
-
 
     def subgrid_smoothing(self, source):
 
@@ -428,8 +419,6 @@ class NexradPrecipFilter(Filter):
 
         #self.plot_filter(nexrad_data, dr_linear)
         self.filter_3d = dr_linear < precip_cutoff
-
-        bugtracker.core.utils.arr_info(dr_linear, "dr_linear")
 
 
 class PrecipFilter(Filter):

@@ -49,8 +49,6 @@ class TargetIdPlotter(RadialPlotter):
 
         self.data = np.ma.masked_where(self.data == 0, self.data)
 
-        bugtracker.core.utils.arr_info(self.data, "target_id")
-
         colors = ['red', 'blue', 'green']
         cmap = matplotlib.colors.ListedColormap(colors)
 
@@ -72,8 +70,6 @@ class TargetIdPlotter(RadialPlotter):
         self.ax = plt.axes(projection=ccrs.PlateCarree(), aspect=aspect)
         self.ax.set_xlabel('Longitude')
         self.ax.set_ylabel('Latitude')
-
-        print("ax type:", type(self.ax))
 
         self._set_grid()
         self._plot_target_id()
