@@ -480,7 +480,20 @@ class NexradProcessor(Processor):
 
         t5 = time.time()
 
-        plot_queue = bugtracker.plots.parallel.ParallelPlotter(self.lats, self.lons, self.metadata, self.grid_info, nexrad_data, id_matrix)
+        radar_id = self.metadata.radar_id
+        plot_dir = self.config['plot_dir']
+        output_folder = os.path.join(plot_dir, radar_id)
+
+        if not os.path.isdir(plot_dir):
+            FileNotFoundError(f"This folder should have been created {plot_dir}")
+
+        grid_coords = bugtracker.core.utils.latlon(self.grid_info, self.metadata)
+        lats = grid_coords['lats']
+        lons = grid_coords['lons']
+
+        plotter = bugtracker.plots.radial.RadialPlotter(lats, lons, output_folder, self.grid_info)
+        plotter.set_data(nexrad_data.joint_product, "joint", self.metadata.scan_dt, self.metadata, 150.0)
+        plotter.save_plot(min_value=-15.0, max_value=40.0)
 
         t6 = time.time()
 
