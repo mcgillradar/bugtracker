@@ -414,4 +414,5 @@ def main():
             raise ValueError(f"Invalid dtype {dtype}")
 
 
-main()
+if __name__ == "__main__":
+    main()
