@@ -140,7 +140,8 @@ class NexradDownloader:
         for remote_file in self.remote_files:
             base = os.path.basename(remote_file)
             local_filename = self.get_local_filename(base)
-            remote_full = os.path.join(self.remote_root, remote_file)
+            # Note: Do not use os.path.join because this is a URL, not a local path.
+            remote_full = self.remote_root + '/' + remote_file
             if os.path.isfile(local_filename):
                 print(f"File already downloaded, skipping: {local_filename}")
             else:
@@ -149,6 +150,7 @@ class NexradDownloader:
 
     def download_file(self, url, local_filename):
 
+        print("url:", url)
         response = urlopen(url)
         CHUNK = 64 * 1024
         with open(local_filename, 'wb') as f:
