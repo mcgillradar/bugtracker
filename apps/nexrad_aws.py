@@ -25,6 +25,7 @@ from xml.etree import ElementTree
 
 import requests
 from bs4 import BeautifulSoup, SoupStrainer
+from  urllib.request import urlopen
 
 import bugtracker.config
 
@@ -146,6 +147,18 @@ class NexradDownloader:
                 self.file_list.append(remote_full)
 
 
+    def download_file(self, url, local_filename):
+
+        response = urlopen(url)
+        CHUNK = 64 * 1024
+        with open(local_filename, 'wb') as f:
+            while True:
+                chunk = response.read(CHUNK)
+                if not chunk:
+                    break
+                f.write(chunk)
+
+
     def download(self):
         """
         Download all files on 
@@ -153,9 +166,11 @@ class NexradDownloader:
 
         download_dir = os.path.join(self.local_root, self.radar)
 
-        for file in self.file_list:
-            subprocess.call(f"wget {file} -P {download_dir}", shell=True)
-
+        for url in self.file_list:
+            base_filename = os.path.basename(url)
+            local_filename = os.path.join(download_dir, base_filename)
+            print("Downloading file:", base_filename)
+            self.download_file(url, local_filename)
 
 
 def sample_urls():
