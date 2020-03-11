@@ -174,6 +174,8 @@ class NexradDownloader:
 
         arg_list = []
         
+        self.file_list.sort()
+
         for url in self.file_list:
             base_filename = os.path.basename(url)
             local_filename = os.path.join(download_dir, base_filename)
@@ -238,4 +240,5 @@ def nexrad():
     downloader.download()
 
 
-nexrad()
+if __name__ == "__main__":
+    nexrad()
