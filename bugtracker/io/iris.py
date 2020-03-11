@@ -118,6 +118,18 @@ class IrisFile:
     def __init__(self, path):
 
         self.path = path
+
+        os_type = os.name
+        if os_type == "posix":
+            self.set_file_linux(path)
+        elif os_type == "nt":
+            self.set_file_windows(path)
+        else:
+            raise OSError(f"Unsupported operating system {os_type}")
+
+
+    def set_file_linux(self, path):
+
         basename = os.path.basename(path)
         split_base = basename.split(':')
         if len(split_base) != 2:
@@ -126,6 +138,22 @@ class IrisFile:
         self.type = split_base[0]
         pattern = "%Y%m%d%H%M%S"
         self.datetime = datetime.datetime.strptime(split_base[1], pattern)
+
+
+    def set_file_windows(self, path):
+        basename = os.path.basename(path)
+        split_base = basename.split('_')
+
+        pattern = "%Y%m%d%H%M%S"
+
+        if len(split_base) == 2:
+            self.type = split_base[0]
+            self.datetime = datetime.datetime.strptime(split_base[1], pattern)
+        if len(split_base) == 3:
+            self.type = split_base[0] + "_" + split_base[1]
+            self.datetime = datetime.datetime.strptime(split_base[2], pattern)
+        else:
+            raise ValueError("Filename has invalid number of parts.")
 
 
     def __str__(self):
