@@ -149,11 +149,11 @@ class IrisFile:
         if len(split_base) == 2:
             self.type = split_base[0]
             self.datetime = datetime.datetime.strptime(split_base[1], pattern)
-        if len(split_base) == 3:
+        elif len(split_base) == 3:
             self.type = split_base[0] + "_" + split_base[1]
             self.datetime = datetime.datetime.strptime(split_base[2], pattern)
         else:
-            raise ValueError("Filename has invalid number of parts.")
+            raise ValueError(f"Filename has invalid number of parts: {split_base}")
 
 
     def __str__(self):
