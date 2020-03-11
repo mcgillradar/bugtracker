@@ -2,14 +2,16 @@
 
 Bugtracker is a Python 3 package, as well as a set of command-line applications, which collectively provide a software suite for analyzing biological echoes from radar data.
 
-For the moment, Bugtracker only supports Linux systems.
+As of v1.5.0, Bugtracker is supported for the following operating systems:
+* Linux (CentOS 7, RHEL 7, Ubuntu, Fedora)
+* Windows 10
 
 We provide support for the following Radar filetypes:
 * IRIS (old Environment Canada format)
 * ODIM_H5 (new Environment Canada format)
 * NEXRAD (US Weather Service radar format)
 
-## Installation procedures
+## Installation (Windows)
 
 1. Clone the repository to a local folder
 
@@ -17,36 +19,96 @@ We provide support for the following Radar filetypes:
 git clone https://github.com/mcgillradar/bugtracker.git
 ```
 
-2. Install the system-level dependency wget. Install it through your system package manager (i.e. 'sudo apt-get install wget' or 'sudo yum install wget')
+2. Install [miniconda3](https://docs.conda.io/en/latest/miniconda.html)
+Select the version marked "Python3.7 Miniconda3 Windows 64-bit" and run the installer.
 
-3. As bugtracker is not yet publicly available on the PyPI package index, you will need to build the package from sources.
+3. Run the miniconda3 command line, and change directory into the bugtracker repository folder. Run the following commands to create and activate the environment:
 
-Run the following script in the top level of the repository. Note: You may need to run this script as sudo, and make sure 'python' is an alias for your python3 interpreter. If not, you will need to modify the update.sh script so it points to the right python.
 ```sh
-./update.sh
+conda env create --name bugtracker --file=environment_windows.yml
+conda activate bugtracker
 ```
 
-4. Verify that the package is installed by running 'pip list'
-
-5. Create the configuration file. The application expects a configuration file called 'bugtracker.json' to be present in the /bugtracker/apps folder. There is a sample file in /examples/bugtracker .
-This will need to be copied to /bugtracker/apps.
-
-This configuration file allows you to adjust some of the algorithm parameters and the location of the data input sources and outputs. Ensure that the folders specified map to directories that exist on your local machine.
-
-6. Run unit tests on bugtracker package (optional)
-
-Navigate to the /tests directory and run the following command:
+4. Build the application by running the following script
 
 ```sh
+python rebuild.py
+```
+
+5. Generate the configuration file using the following:
+```sh
+python generate_config.py
+```
+
+This command will prompt the user for a root directory to save application data.
+
+6. Run unit tests (optional)
+```sh
+cd tests
 pytest
+```
+
+## Installation (Linux)
+
+1. Clone the repository to a local folder
+
+```sh
+git clone https://github.com/mcgillradar/bugtracker.git
+```
+
+2. Install [miniconda3](https://docs.conda.io/en/latest/miniconda.html)
+Select the version marked "Python3.7 Miniconda3 Linux 64-bit" and run the installer.
+
+3. Run the miniconda3 command line, and change directory into the bugtracker repository folder. Run the following commands to create and activate the environment:
+
+```sh
+conda env create --name bugtracker --file=environment_linux.yml
+conda activate bugtracker
+```
+
+4. Build the application by running the following script
+
+```sh
+python rebuild.py
+```
+
+5. Generate the configuration file using the following:
+```sh
+python generate_config.py
+```
+
+This command will prompt the user for a root directory to save application data.
+
+6. Run unit tests (optional)
+```sh
+cd tests
+pytest
+```
+
+## Updating
+
+These instructions work for both Linux and Windows.
+
+1. Get the latest version of Bugtracker by running the following command inside the repository:
+
+```sh
+git pull
+```
+
+2. Run the rebuild script again
+
+```sh
+python rebuild.py
 ```
 
 ## Overview of the apps
 
+Apps are run from within the /apps folder.
+
 There are currently 4 command-line applications. To get help for each application, run the application with the '-h' flag. For example:
 
 ```sh
-python3 nexrad_aws.py -h
+python nexrad_aws.py -h
 ```
 
 1. nexrad_aws.py
@@ -66,13 +128,13 @@ A quick way to get started would be the following:
 cd /your/local/path/bugtracker/apps
 
 # download 3 days worth of NEXRAD files for testing
-python3 nexrad_aws.py 20190728 20190730 kcbw
+python nexrad_aws.py 20190728 20190730 kcbw
 
 # create calibration file (by default will run over a 6 hour period)
-python3 calib.py 201907280300 nexrad kcbw
+python calib.py 201907280300 nexrad kcbw
 
 # run processing algorithm (by default will only do one timestamp, but can be extended)
-python3 tracker.py 201907300300 nexrad kcbw
+python tracker.py 201907300300 nexrad kcbw
 ```
 
 

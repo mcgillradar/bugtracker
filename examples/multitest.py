@@ -56,9 +56,6 @@ class Multiprocessor():
         self.pool.join()
 
 
-
-
-
 def main():
 
     t0 = time.time()
