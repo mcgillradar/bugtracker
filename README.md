@@ -59,7 +59,7 @@ git clone https://github.com/mcgillradar/bugtracker.git
 2. Install [miniconda3](https://docs.conda.io/en/latest/miniconda.html)
 Select the version marked "Python3.7 Miniconda3 Linux 64-bit" and run the installer.
 
-3. Run the miniconda3 command line, and change directory into the bugtracker repository folder. Run the following commands to create and activate the environment:
+3. Open a terminal, and change directory into the bugtracker repository folder. Run the following commands to create and activate the environment:
 
 ```sh
 conda env create --name bugtracker --file=environment_linux.yml
