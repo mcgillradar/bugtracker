@@ -26,7 +26,6 @@ import os
 import sys
 import datetime
 
-import psutil
 import numpy as np
 import geopy
 import pyart
@@ -114,23 +113,6 @@ def latlon(grid_info, metadata):
     grid_coords['lons'] = lons
 
     return grid_coords
-
-
-
-def check_memory(requested_bytes):
-    """
-    This ensures you do
-    """
-
-    print(f"Requesting: {requested_bytes} bytes")
-
-    vm = psutil.virtual_memory()
-    available = vm.available
-
-    print(f"Available memory: {available} bytes")
-
-    if available < requested_bytes:
-        raise MemoryError(f"Requested bytes {requested_bytes} greater than available: {available}")
 
 
 def iris_scan_stats(radar_file, label):
