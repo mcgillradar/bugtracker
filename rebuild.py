@@ -39,6 +39,12 @@ def get_package_name():
 
 def rebuild():
 
+    if not os.path.isdir("./build"):
+        os.mkdir("./build")
+    
+    if not os.path.isdir("./dist"):
+        os.mkdir("./dist")
+
     empty_folder("./build")
     empty_folder("./dist")
 
