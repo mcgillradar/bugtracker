@@ -54,54 +54,6 @@ with suppress_stdout():
 import bugtracker
 
 
-def get_srtm(metadata, grid_info):
-    """
-    This function calls the SRTM3Reader and the Downloader.
-    The Reader is responsible for IO for SRTM3 files, and the Downloader
-    is responsible for figuring out which files (if any) need to be
-    downloaded from US Government servers.
-    """
-
-    # For the moment, I have commented out the altitude code, because
-    # we are not actually using the elevation, and I am getting some
-    # bugs from the SRTM extraction code.
-
-    """
-    reader = bugtracker.calib.elevation.SRTM3Reader(metadata, grid_info)
-
-    reader.get_active_cells()
-    active_keys = reader.get_active_keys()
-    print(active_keys)
-
-    downloader = bugtracker.calib.srtm3_download.Downloader(active_keys)
-    downloader.set_missing_cells()
-    num_to_download = len(downloader.missing)
-
-    if num_to_download > 0:
-        print("Number of files to download:", num_to_download)
-        downloader.self_test()
-        downloader.set_missing_cells()
-        downloader.download()
-        downloader.extract()
-        downloader.final_check()
-    else:
-        print("All SRTM3 files already downloaded, skipping.")
-
-
-    altitude_grid = reader.load_elevation()
-    """
-
-    final_grid = bugtracker.calib.calib.Grid()
-    coords = bugtracker.core.utils.latlon(grid_info, metadata)
-
-    final_grid.lats = coords['lats']
-    final_grid.lons = coords['lons']
-
-    grid_dims = final_grid.lons.shape
-    final_grid.altitude = np.zeros(grid_dims, dtype=float)
-
-    return final_grid
-
 
 def plot_calib_graph(args, metadata, radial_plotter, plot_type, angle, data):
     time_start = datetime.datetime.strptime(args.timestamp, "%Y%m%d%H%M")
@@ -277,7 +229,7 @@ def run_iris_calib(args, config):
     metadata = bugtracker.core.metadata.from_iris_set(iris_collection.sets[0])
     grid_info = bugtracker.io.iris.iris_grid()
 
-    calib_grid = get_srtm(metadata, grid_info)
+    calib_grid = bugtracker.calib.calib.get_srtm(metadata, grid_info)
 
     calib_controller = bugtracker.calib.calib.IrisController(args, metadata, grid_info)
     calib_controller.set_grids(calib_grid)
@@ -323,7 +275,7 @@ def run_nexrad_calib(args, config):
     manager = bugtracker.io.nexrad.NexradManager(config, station_id)
     manager.populate(start_time)
 
-    calib_grid = get_srtm(manager.metadata, manager.grid_info)
+    calib_grid = bugtracker.calib.calib.get_srtm(manager.metadata, manager.grid_info)
 
     calib_files = manager.get_range(start_time, end_time)
 
@@ -358,7 +310,7 @@ def run_odim_calib(args, config):
     manager = bugtracker.io.odim.OdimManager(config, station_id)
     manager.populate(start_time)
 
-    calib_grid = get_srtm(manager.metadata, manager.grid_info)
+    calib_grid = bugtracker.calib.calib.get_srtm(manager.metadata, manager.grid_info)
 
     calib_files = manager.get_range(start_time, end_time)
 

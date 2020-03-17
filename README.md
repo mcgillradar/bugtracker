@@ -2,6 +2,8 @@
 
 Bugtracker is a Python 3 package, as well as a set of command-line applications, which collectively provide a software suite for analyzing biological echoes from radar data.
 
+This README contains the installation instructions and a quick start guide. A more in-depth user manual can be found in [MANUAL.md](https://github.com/mcgillradar/bugtracker/blob/master/MANUAL.md)
+
 As of v1.5.0, Bugtracker is supported for the following operating systems:
 * Linux (CentOS 7, RHEL 7, Ubuntu, Fedora)
 * Windows 10

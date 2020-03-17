@@ -44,7 +44,7 @@ class Processor(abc.ABC):
         self.plotter = None
 
         if not os.path.isfile(self.calib_file):
-            raise FileNotFoundError("Missing calib file")
+            raise FileNotFoundError(f"Missing calib file {self.calib_file}")
 
         self.load_universal_calib()
         self.verify_universal_calib()

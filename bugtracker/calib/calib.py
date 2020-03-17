@@ -31,6 +31,56 @@ import bugtracker.config
 import bugtracker.core.utils
 from bugtracker.calib.clutter import ClutterFilter
 
+
+def get_srtm(metadata, grid_info):
+    """
+    This function calls the SRTM3Reader and the Downloader.
+    The Reader is responsible for IO for SRTM3 files, and the Downloader
+    is responsible for figuring out which files (if any) need to be
+    downloaded from US Government servers.
+    """
+
+    # For the moment, I have commented out the altitude code, because
+    # we are not actually using the elevation, and I am getting some
+    # bugs from the SRTM extraction code.
+
+    """
+    reader = bugtracker.calib.elevation.SRTM3Reader(metadata, grid_info)
+
+    reader.get_active_cells()
+    active_keys = reader.get_active_keys()
+    print(active_keys)
+
+    downloader = bugtracker.calib.srtm3_download.Downloader(active_keys)
+    downloader.set_missing_cells()
+    num_to_download = len(downloader.missing)
+
+    if num_to_download > 0:
+        print("Number of files to download:", num_to_download)
+        downloader.self_test()
+        downloader.set_missing_cells()
+        downloader.download()
+        downloader.extract()
+        downloader.final_check()
+    else:
+        print("All SRTM3 files already downloaded, skipping.")
+
+
+    altitude_grid = reader.load_elevation()
+    """
+
+    final_grid = bugtracker.calib.calib.Grid()
+    coords = bugtracker.core.utils.latlon(grid_info, metadata)
+
+    final_grid.lats = coords['lats']
+    final_grid.lons = coords['lons']
+
+    grid_dims = final_grid.lons.shape
+    final_grid.altitude = np.zeros(grid_dims, dtype=float)
+
+    return final_grid
+
+
 class Grid:
 
     def __init__(self):

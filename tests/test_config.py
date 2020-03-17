@@ -30,7 +30,7 @@ def test_fields():
 
     iris_keys = ["convol_scans"]
     clutter_keys = ["dbz_threshold", "coverage_threshold"]
-    precip_keys = ["azim_region", "gate_region", "max_dbz_per_degree"]
+    precip_keys = ["azim_region", "gate_region", "max_dbz_per_km"]
 
     for key in iris_keys:
         assert key in config["iris_settings"]

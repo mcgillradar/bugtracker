@@ -64,7 +64,7 @@ def sin_dbz(grid_info):
 def metadata():
     test_lat = 44.45
     test_lon = -110.081
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime(2013, 7, 17, 19, 50, 0)
     metadata = bugtracker.core.metadata.Metadata('test', now, test_lat, test_lon, 'test_radar')
     return metadata
 
