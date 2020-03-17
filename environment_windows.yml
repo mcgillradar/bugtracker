@@ -65,7 +65,7 @@ dependencies:
   - pyqt
   - pyshp
   - pysocks
-  - python
+  - python=3.7
   - python-dateutil
   - pytz
   - qt
