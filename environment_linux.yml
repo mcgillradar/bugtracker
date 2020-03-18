@@ -28,6 +28,7 @@ dependencies:
   - glib
   - gst-plugins-base
   - gstreamer
+  - h5py
   - hdf4
   - hdf5
   - icu

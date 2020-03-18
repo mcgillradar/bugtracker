@@ -21,6 +21,7 @@ dependencies:
   - geographiclib
   - geopy
   - geos
+  - h5py
   - hdf4
   - hdf5
   - icc_rt
