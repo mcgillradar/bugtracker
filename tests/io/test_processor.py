@@ -1,4 +1,5 @@
 import os
+import datetime
 
 import pytest
 
@@ -58,3 +59,55 @@ def test_iris_actual_data():
     output_file = os.path.join(output_dir, 'dbz_201307171949.nc')
     assert os.path.isfile(output_file)
 
+
+def test_nexrad_actual_data():
+
+    config_path = "../apps/bugtracker.json"
+    config = bugtracker.config.load(config_path)
+
+    template_date = "201907190300"
+    sample_date = "201907190300"
+    fmt = "%Y%m%d%H%M"
+
+    template_dt = datetime.datetime.strptime(template_date, fmt)
+    sample_dt = datetime.datetime.strptime(sample_date, fmt)
+
+    radar_id = "kcbw"
+    manager = bugtracker.io.nexrad.NexradManager(config, radar_id)
+    manager.populate(template_dt)
+
+    nexrad_file = manager.get_closest(sample_dt)
+
+    processor = bugtracker.io.processor.NexradProcessor(manager)
+    processor.process_file(nexrad_file)
+
+    output_dir = os.path.join(config['netcdf_dir'], manager.metadata.radar_id)
+    output_file = os.path.join(output_dir, "dbz_201907190259.nc")
+    assert os.path.isfile(output_file)
+
+
+
+def test_odim_actual_data():
+
+    config_path = "../apps/bugtracker.json"
+    config = bugtracker.config.load(config_path)
+
+    template_date = "202002190300"
+    sample_date = "202002191630"
+    fmt = "%Y%m%d%H%M"
+
+    template_dt = datetime.datetime.strptime(template_date, fmt)
+    sample_dt = datetime.datetime.strptime(sample_date, fmt)
+
+    radar_id = "casbv"
+    manager = bugtracker.io.odim.OdimManager(config, radar_id)
+    manager.populate(template_dt)
+
+    odim_file = manager.get_closest(sample_dt)
+
+    processor = bugtracker.io.processor.OdimProcessor(manager)
+    processor.process_file(odim_file)
+
+    output_dir = os.path.join(config['netcdf_dir'], manager.metadata.radar_id)
+    output_file = os.path.join(output_dir, "dbz_202002191630.nc")
+    assert os.path.isfile(output_file)

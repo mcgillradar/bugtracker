@@ -12,7 +12,12 @@ def test_odim_sample():
 
     assert odim_data.dbz_unfiltered is not None
 
-    dbz_shape = odim_data.dbz_unfiltered.dbz_shape
+    dbz_shape = odim_data.dbz_unfiltered.shape
 
-    assert dbz_shape[0] == 720
-    assert dbz_shape[1] == 1823
+    expected_angles = 6
+    expected_azims = 720
+    expected_gates = 480
+
+    assert dbz_shape[0] == expected_angles
+    assert dbz_shape[1] == expected_azims
+    assert dbz_shape[2] == expected_gates
