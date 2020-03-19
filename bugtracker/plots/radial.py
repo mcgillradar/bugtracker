@@ -23,8 +23,10 @@ parameters is an important part of this library.
 
 
 import os
+import sys
 import glob
 import datetime
+from contextlib import contextmanager
 
 import numpy as np
 import cartopy.crs as ccrs
@@ -35,6 +37,16 @@ import geopy
 import geopy.distance
 import netCDF4 as nc
 
+
+@contextmanager
+def suppress_stderr():
+    with open(os.devnull, 'w') as devnull:
+        valid_stderr = sys.stderr
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stderr = valid_stderr
 
 
 class RadialPlotter():
@@ -70,13 +82,18 @@ class RadialPlotter():
         major_ticks_lon = np.arange(-140, -60, 1.0)
         minor_ticks_lon = np.arange(-140, -60, 0.2)
 
-        self.ax.set_xticks(ticks=major_ticks_lon)
-        self.ax.set_xticks(ticks=minor_ticks_lon, minor=True)
-        self.ax.set_yticks(ticks=major_ticks_lat)
-        self.ax.set_yticks(ticks=minor_ticks_lat, minor=True)
+        """
+        Disabling warning from geoaxes (cartopy)
+        """
+        with suppress_stderr():
 
-        self.ax.grid(which='minor', alpha=0.2)
-        self.ax.grid(which='major', alpha=0.5)
+            self.ax.set_xticks(ticks=major_ticks_lon)
+            self.ax.set_xticks(ticks=minor_ticks_lon, minor=True)
+            self.ax.set_yticks(ticks=major_ticks_lat)
+            self.ax.set_yticks(ticks=minor_ticks_lat, minor=True)
+
+            self.ax.grid(which='minor', alpha=0.2)
+            self.ax.grid(which='major', alpha=0.5)
 
 
     def _set_contours(self, min_value=(-10), max_value=40):
