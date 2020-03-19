@@ -220,8 +220,13 @@ class NexradManager:
 
         t0 = time.time()
 
-        nexrad_data = NexradData(nexrad_file, self.metadata, self.grid_info)
-        
+        try:
+            nexrad_data = NexradData(nexrad_file, self.metadata, self.grid_info)
+        except (IndexError, KeyError) as e:
+            print(f"This nexrad file could not be read, skipping: {nexrad_file}")
+            print(e)
+            return None
+
         t1 = time.time()
         elapsed = t1 - t0
         print(f"Time for data extraction: {elapsed:.3f} s")

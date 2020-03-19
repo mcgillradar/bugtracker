@@ -428,17 +428,17 @@ class NexradController(Controller):
 
         nex_data = self.manager.extract_data(nexrad_file)
 
-        dbz_threshold = self.config['clutter']['dbz_threshold']
-        clutter_dims = self.clutter.get_dims()
+        if nex_data is None:
+            self.num_excluded += 1
+        else:
+            dbz_threshold = self.config['clutter']['dbz_threshold']
+            clutter_dims = self.clutter.get_dims()
+            if nex_data.dbz_unfiltered.shape != clutter_dims:
+                raise ValueError(f"Incompatible shape: {clutter_dims}")
 
-        if nex_data.dbz_unfiltered.shape != clutter_dims:
-            raise ValueError(f"Incompatible shape: {clutter_dims}")
-
-        clutter_above = nex_data.dbz_unfiltered > dbz_threshold
-
-        clutter_above = clutter_above.filled(fill_value=False)
-
-        self.clutter_instances = self.clutter_instances + clutter_above.astype(int)
+            clutter_above = nex_data.dbz_unfiltered > dbz_threshold
+            clutter_above = clutter_above.filled(fill_value=False)
+            self.clutter_instances = self.clutter_instances + clutter_above.astype(int)
 
 
     def print_levels(self, nexrad_file):
@@ -459,6 +459,7 @@ class NexradController(Controller):
 
         # Counters for number of hits above threshold
         self.clutter_instances = np.zeros(clutter_dims, dtype=int)
+        self.num_excluded = 0
 
         num_timeseries = len(self.calib_files)
         if num_timeseries == 0:
@@ -468,8 +469,11 @@ class NexradController(Controller):
             print("Calib file processing:", calib_file)
             self.count_instances(calib_file)
 
+        adjusted_num_timeseries = num_timeseries - self.num_excluded
+        print("Num excluded:", self.num_excluded)
+
         # Normalization
-        self.norm_clutter = self.clutter_instances / float(num_timeseries)
+        self.norm_clutter = self.clutter_instances / float(adjusted_num_timeseries)
 
         bugtracker.core.utils.arr_info(self.clutter_instances, "clutter_instances")
         bugtracker.core.utils.arr_info(self.norm_clutter, "norm_clutter")

@@ -436,6 +436,9 @@ class NexradProcessor(Processor):
         t0 = time.time()
 
         nexrad_data = self.manager.extract_data(nexrad_file)
+        # Checking to make sure data is valid
+        if nexrad_data is None:
+            return None
 
         t1 = time.time()
 
