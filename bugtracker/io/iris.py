@@ -119,16 +119,16 @@ class IrisFile:
 
         self.path = path
 
-        os_type = os.name
-        if os_type == "posix":
-            self.set_file_linux(path)
-        elif os_type == "nt":
-            self.set_file_windows(path)
+        # This section may need to be adapted, if more patterns emerge.
+        # Currently, there are two recognized filename formats for IRIS
+        
+        if ':' in path:
+            self.set_file_colon(path)
         else:
-            raise OSError(f"Unsupported operating system {os_type}")
+            self.set_file_underscore(path)
 
 
-    def set_file_linux(self, path):
+    def set_file_colon(self, path):
 
         basename = os.path.basename(path)
         split_base = basename.split(':')
@@ -140,7 +140,7 @@ class IrisFile:
         self.datetime = datetime.datetime.strptime(split_base[1], pattern)
 
 
-    def set_file_windows(self, path):
+    def set_file_underscore(self, path):
         basename = os.path.basename(path)
         split_base = basename.split('_')
 

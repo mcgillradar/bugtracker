@@ -10,8 +10,8 @@ def test_nexrad_manager():
     config = bugtracker.config.load(config_path)
 
     test_radar = "kcbw"
-    test_date = datetime.datetime(2019, 7, 28)
-    test_date_data = datetime.datetime(2019, 7, 30, 6)
+    test_date = datetime.datetime(2019, 7, 19)
+    test_date_data = datetime.datetime(2019, 7, 19, 6)
 
     manager = bugtracker.io.nexrad.NexradManager(config, test_radar)
     manager.populate(test_date)

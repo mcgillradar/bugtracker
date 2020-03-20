@@ -125,5 +125,13 @@ class ConfigTemplate:
 
         self.safe_mkdir(self.data["plot_dir"])
         self.safe_mkdir(self.data["netcdf_dir"])
-        self.safe_mkdir(self.data["cache_dir"])
+
+        cache_dir = self.data["cache_dir"]
+        cache_calib_dir = os.path.join(cache_dir, "calib")
+        cache_elevation_dir = os.path.join(cache_dir, "elevation")
+
+        self.safe_mkdir(cache_dir)
+        self.safe_mkdir(cache_calib_dir)
+        self.safe_mkdir(cache_elevation_dir)
+
         self.safe_mkdir(self.data["animation_dir"])
