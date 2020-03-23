@@ -115,14 +115,14 @@ python nexrad_aws.py -h
 
 This will display a help screen with information on what command-line arguments the application expects.
 
-1. nexrad_aws.py
-	This application allows automated downloading of NEXRAD data from the Amazon Web Services servers provided by the US Weather Service.
-2. calib.py
-	This calibration application must be run prior to the processing. This generates a calibration file which is specific to each radar. This must be run prior to the main tracker.py application.
-3. tracker.py
-	This is the main data processing application. It takes as input raw data files, and outputs NETCDF4 containing the filtered bug data.
-4. animate.py
-	This application creates a series of .avi animations. This must be run after tracker.py, as it uses the output images created by it.
+1. **nexrad_aws.py**
+	* This application allows automated downloading of NEXRAD data from the Amazon Web Services servers provided by the US Weather Service.
+2. **calib.py**
+	* This calibration application must be run prior to the processing. This generates a calibration file which is specific to each radar. This must be run prior to the main tracker.py application.
+3. **tracker.py**
+	* This is the main data processing application. It takes as input raw data files, and outputs NETCDF4 containing the filtered bug data.
+4. **animate.py**
+	* This application creates a series of .avi animations. This must be run after tracker.py, as it uses the output images created by it.
 
 ## Quick Start Guide
 
