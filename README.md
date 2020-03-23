@@ -138,15 +138,3 @@ python calib.py 201907280300 nexrad kcbw
 # run processing algorithm (by default will only do one timestamp, but can be extended)
 python tracker.py 201907300300 nexrad kcbw
 ```
-
-
-## Design Philosophy
-
-Makes heavy use of object-oriented programming in Python.
-
-1. I make use of inheritance to allow reusable code between the IRIS, NEXRAD and ODIM_H5 processing code. For example:
-* Processor -> IrisProcessor
-* Controller -> IrisController and Controller -> NexradController
-* Filter -> ClutterFilter, PrecipFilter
-
-2. Important information about the rader is contained within the Metadata and GridInfo classes.
