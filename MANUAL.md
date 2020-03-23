@@ -7,7 +7,7 @@ Miniconda3 is the distribution of Python 3 that was chosen for this application.
 1. Cross-platform development (runs the same on Windows and Linux)
 2. Ease of deployment
 
-Although the steps in the [README.md](https://github.com/mcgillradar/bugtracker/blob/master/README.md)] describe how to set up the Bugtracker conda environment, I highly recommend checking out the miniconda [manual](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html). It describes in detail a lot of edge cases (how to delete environments, create new ones, install new packages, etc.)
+Although the steps in the [README.md](https://github.com/mcgillradar/bugtracker/blob/master/README.md) describe how to set up the Bugtracker conda environment, I highly recommend checking out the miniconda [manual](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html). It describes in detail a lot of edge cases (how to delete environments, create new ones, install new packages, etc.)
 
 
 ## NETCDF System library (optional)
@@ -76,7 +76,7 @@ I have tried to make the error messages in this application as descriptive as po
 In the event of an error that doesn't have a clear solution, please paste the stack trace and error message into a new issue in the [issue tracker](https://github.com/mcgillradar/bugtracker/issues), so the application developers can look into it.
 
 
-## Developer's Guide
+## Developer Guide
 
 We welcome pull requests and contributions to this project. In this section, I will explain the general philosphy behind the development, so the codebase is more clear, and to give a better idea of how to extend the code.
 
@@ -97,8 +97,8 @@ Here are a few important examples:
 
 Another important note: Although the application uses the Radar class taken from the [pyart](https://arm-doe.github.io/pyart/API/generated/pyart.core.Radar.html#pyart.core.Radar) project, we use two classes to keep track of important infromation about a specific radar:
 
-1. Metadata
-2. GridInfo
+1. **Metadata**
+2. **GridInfo**
 
 These classes are ubiquitous throughout the application, so if you are going to develop or extend Bugtracker, I highly recommend checking out these two files, as they are a base for much of the application:
 

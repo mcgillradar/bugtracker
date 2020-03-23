@@ -107,11 +107,13 @@ python rebuild.py
 
 Apps are run from within the /apps folder.
 
-There are currently 4 command-line applications. To get help for each application, run the application with the '-h' flag. For example:
+**Important:** There are currently 4 command-line applications. To get help for each application, run the application with the '-h' flag. For example:
 
 ```sh
 python nexrad_aws.py -h
 ```
+
+This will display a help screen with information on what command-line arguments the application expects.
 
 1. nexrad_aws.py
 	This application allows automated downloading of NEXRAD data from the Amazon Web Services servers provided by the US Weather Service.
