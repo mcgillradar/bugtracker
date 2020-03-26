@@ -244,8 +244,15 @@ class IrisController(Controller):
         above a threshold, adding to instances counters.
         """
 
-        iris_data = bugtracker.io.iris.IrisData(iris_set)
-        iris_data.fill_grids()
+        iris_data = None
+
+        try:
+            iris_data = bugtracker.io.iris.IrisData(iris_set)
+            iris_data.fill_grids()
+        except (OSError, IndexError):
+            print("Could not read file, skipping.")
+            self.num_excluded += 1
+            return
 
         dbz_threshold = self.config['clutter']['dbz_threshold']
 
@@ -287,12 +294,17 @@ class IrisController(Controller):
         if num_timeseries == 0:
             raise ValueError("No files in calibration set.")
 
+        self.num_excluded = 0
+
         for iris_set in self.calib_sets:
             self.count_instances(iris_set)
 
+        print("Total number of excluded files:", self.num_excluded)
+        adjusted_total = num_timeseries - self.num_excluded
+
         # Normalization
-        self.norm_dopvol = self.dopvol_instances / float(num_timeseries)
-        self.norm_convol = self.convol_instances / float(num_timeseries)
+        self.norm_dopvol = self.dopvol_instances / float(adjusted_total)
+        self.norm_convol = self.convol_instances / float(adjusted_total)
 
         bugtracker.core.utils.arr_info(self.dopvol_instances, "dopvol_instances")
         bugtracker.core.utils.arr_info(self.convol_instances, "convol_instances")

@@ -121,8 +121,10 @@ class IrisFile:
 
         # This section may need to be adapted, if more patterns emerge.
         # Currently, there are two recognized filename formats for IRIS
-        
-        if ':' in path:
+
+        if '~~' in path:
+            self.set_file_tilde(path)
+        elif ':' in path:
             self.set_file_colon(path)
         else:
             self.set_file_underscore(path)
@@ -138,6 +140,23 @@ class IrisFile:
         self.type = split_base[0]
         pattern = "%Y%m%d%H%M%S"
         self.datetime = datetime.datetime.strptime(split_base[1], pattern)
+
+
+    def set_file_tilde(self, path):
+
+        basename = os.path.basename(path)
+        split_base = basename.split('~~')
+
+        if len(split_base) != 2:
+            print(split_base)
+            raise SyntaxError(f"Invalid filename {basename}")
+
+        datestamp = split_base[0]
+        pattern = "%Y%m%d%H%M%S"
+        self.datetime = datetime.datetime.strptime(datestamp, pattern)
+
+        suffix_split = split_base[1].split(':')
+        self.type=suffix_split[0]
 
 
     def set_file_underscore(self, path):
@@ -279,6 +298,12 @@ class IrisCollection:
 
         convol_files = glob.glob(os.path.join(directory,"CONVOL*"))
         dopvol_files = glob.glob(os.path.join(directory,"DOPVOL*"))
+
+        # including files with prefixes
+
+        convol_files.extend(glob.glob(os.path.join(directory, "*CONVOL*")))
+        dopvol_files.extend(glob.glob(os.path.join(directory, "*DOPVOL*")))
+
         file_list = convol_files + dopvol_files
 
         for file in file_list:
