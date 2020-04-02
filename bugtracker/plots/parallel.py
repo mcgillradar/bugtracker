@@ -38,6 +38,21 @@ and maximize CPU usage.
 """
 
 
+def get_folder(base_folder, scan_dt):
+    """
+    Create the directory tree, then return the full folder to
+    be used as an input argument for the Plotter() object
+    """
+
+    year_str = scan_dt.strftime("%Y")
+    month_str = scan_dt.strftime("%m")
+    day_str = scan_dt.strftime("%d")
+
+    full_folder = os.path.join(base_folder, year_str, month_str, day_str)
+
+    return full_folder
+
+
 def get_plotter(metadata, grid_info, config, lats, lons, plot_type):
     """
     Activate the RadialPlotter. This code may need to be significantly
@@ -48,17 +63,15 @@ def get_plotter(metadata, grid_info, config, lats, lons, plot_type):
     radar_id = metadata.radar_id
     plot_dir = config['plot_dir']
     output_folder = os.path.join(plot_dir, radar_id)
+    full_folder = get_folder(output_folder, metadata.scan_dt)
 
-    if not os.path.isdir(plot_dir):
-        FileNotFoundError(f"This folder should have been created {plot_dir}")
-
-    if not os.path.isdir(output_folder):
-        os.mkdir(output_folder)
+    if not os.path.isdir(full_folder):
+        FileNotFoundError(f"This folder should have been created {full_folder}")
 
     if plot_type == 'target_id':
-        return TargetIdPlotter(lats, lons, output_folder, grid_info)
+        return TargetIdPlotter(lats, lons, full_folder, grid_info)
     else:
-        return RadialPlotter(lats, lons, output_folder, grid_info)
+        return RadialPlotter(lats, lons, full_folder, grid_info)
 
 
 def plot_worker(plot_type, metadata, grid_info, config, lats, lons, dbz_idx, scan_data, id_matrix):
@@ -154,6 +167,16 @@ class ParallelPlotter:
         self.metadata = metadata
         self.scan_data = scan_data
         self.id_matrix = id_matrix
+
+        radar_id = metadata.radar_id
+        plot_dir = self.config['plot_dir']
+        output_folder = os.path.join(plot_dir, radar_id)
+        full_folder = get_folder(output_folder, metadata.scan_dt)
+
+        # Make folders once
+        if not os.path.isdir(full_folder):
+            print(f"Making folders recursively: {full_folder}")
+            os.makedirs(full_folder)
 
         dbz_elevs = scan_data.dbz_elevs
         num_elevs = len(dbz_elevs)

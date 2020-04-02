@@ -93,14 +93,18 @@ class Processor(abc.ABC):
 
         output_folder = self.config['netcdf_dir']
 
+        year_str = scan_dt.strftime("%Y")
+        month_str = scan_dt.strftime("%m")
+        day_str = scan_dt.strftime("%d")
+
         if not os.path.isdir(output_folder):
             raise FileNotFoundError(output_folder)
 
         radar_id = self.metadata.radar_id
-        subfolder = os.path.join(output_folder, radar_id)
+        subfolder = os.path.join(output_folder, radar_id, year_str, month_str, day_str)
 
         if not os.path.isdir(subfolder):
-            os.mkdir(subfolder)
+            os.makedirs(subfolder)
 
         pattern = "dbz_%Y%m%d%H%M.nc"
         output_filename = scan_dt.strftime(pattern)
@@ -278,6 +282,12 @@ class IrisProcessor(Processor):
         iris_data = bugtracker.io.iris.IrisData(iris_set)
         iris_data.fill_grids()
         
+        print("iris date:", iris_data.datetime)
+        print("metadata date:", self.metadata.scan_dt)
+
+
+        input("Pause>")
+
         t1 = time.time()
 
         # construct the PrecipFilter from iris_set

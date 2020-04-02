@@ -6,14 +6,14 @@ long_description = """# bugtracker
 
 setup(
     name='bugtracker',
-    version='1.5.3',
+    version='1.5.4',
     description='Insect tracking from radar data.',
     long_description=long_description,
     long_description_content_type='text/markdown',
     author='Frederic Fabry, Daniel Hogg',
     author_email='daniel.hogg@mcgill.ca',
     classifiers=[
-        'Development Status :: 5 - Alpha',
+        'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 3',
     ],
     keywords='radar',
