@@ -152,7 +152,7 @@ class IrisFile:
             raise SyntaxError(f"Invalid filename {basename}")
 
         datestamp = split_base[0]
-        pattern = "%Y%m%d%H%M%S"
+        pattern = "%Y%m%d%H%M"
         self.datetime = datetime.datetime.strptime(datestamp, pattern)
 
         suffix_split = split_base[1].split(':')

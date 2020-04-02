@@ -285,9 +285,6 @@ class IrisProcessor(Processor):
         print("iris date:", iris_data.datetime)
         print("metadata date:", self.metadata.scan_dt)
 
-
-        input("Pause>")
-
         t1 = time.time()
 
         # construct the PrecipFilter from iris_set

@@ -53,7 +53,7 @@ def get_folder(base_folder, scan_dt):
     return full_folder
 
 
-def get_plotter(metadata, grid_info, config, lats, lons, plot_type):
+def get_plotter(metadata, grid_info, scan_data, config, lats, lons, plot_type):
     """
     Activate the RadialPlotter. This code may need to be significantly
     modified if we need to do parallel plotting (multi-cpu to speed up
@@ -63,7 +63,7 @@ def get_plotter(metadata, grid_info, config, lats, lons, plot_type):
     radar_id = metadata.radar_id
     plot_dir = config['plot_dir']
     output_folder = os.path.join(plot_dir, radar_id)
-    full_folder = get_folder(output_folder, metadata.scan_dt)
+    full_folder = get_folder(output_folder, scan_data.datetime)
 
     if not os.path.isdir(full_folder):
         FileNotFoundError(f"This folder should have been created {full_folder}")
@@ -77,7 +77,7 @@ def get_plotter(metadata, grid_info, config, lats, lons, plot_type):
 def plot_worker(plot_type, metadata, grid_info, config, lats, lons, dbz_idx, scan_data, id_matrix):
 
     plot_type = plot_type.lower().strip()
-    plotter = get_plotter(metadata, grid_info, config, lats, lons, plot_type)
+    plotter = get_plotter(metadata, grid_info, scan_data, config, lats, lons, plot_type)
 
 
     if plot_type == 'filtered':
@@ -171,7 +171,7 @@ class ParallelPlotter:
         radar_id = metadata.radar_id
         plot_dir = self.config['plot_dir']
         output_folder = os.path.join(plot_dir, radar_id)
-        full_folder = get_folder(output_folder, metadata.scan_dt)
+        full_folder = get_folder(output_folder, scan_data.datetime)
 
         # Make folders once
         if not os.path.isdir(full_folder):
