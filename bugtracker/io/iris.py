@@ -124,22 +124,8 @@ class IrisFile:
 
         if '~~' in path:
             self.set_file_tilde(path)
-        elif ':' in path:
-            self.set_file_colon(path)
         else:
-            self.set_file_underscore(path)
-
-
-    def set_file_colon(self, path):
-
-        basename = os.path.basename(path)
-        split_base = basename.split(':')
-        if len(split_base) != 2:
-            raise SyntaxError(f"Invalid filename {basename}")
-
-        self.type = split_base[0]
-        pattern = "%Y%m%d%H%M%S"
-        self.datetime = datetime.datetime.strptime(split_base[1], pattern)
+            raise ValueError("Filename format not supported.")
 
 
     def set_file_tilde(self, path):
@@ -157,22 +143,6 @@ class IrisFile:
 
         suffix_split = split_base[1].split(':')
         self.type=suffix_split[0]
-
-
-    def set_file_underscore(self, path):
-        basename = os.path.basename(path)
-        split_base = basename.split('_')
-
-        pattern = "%Y%m%d%H%M%S"
-
-        if len(split_base) == 2:
-            self.type = split_base[0]
-            self.datetime = datetime.datetime.strptime(split_base[1], pattern)
-        elif len(split_base) == 3:
-            self.type = split_base[0] + "_" + split_base[1]
-            self.datetime = datetime.datetime.strptime(split_base[2], pattern)
-        else:
-            raise ValueError(f"Filename has invalid number of parts: {split_base}")
 
 
     def __str__(self):
@@ -239,6 +209,8 @@ class IrisSet:
 
         dopvol_elevs = []
 
+        print(self)
+
         angle_1A = extract_fixed_angle(self.dopvol_1A, single=True)
         angle_1B = extract_fixed_angle(self.dopvol_1B, single=True)
         angle_2 = extract_fixed_angle(self.dopvol_2, single=True)
@@ -296,18 +268,18 @@ class IrisCollection:
         self.radar_id = radar_id
         self.files = []
 
-        convol_files = glob.glob(os.path.join(directory,"CONVOL*"))
-        dopvol_files = glob.glob(os.path.join(directory,"DOPVOL*"))
-
         # including files with prefixes
 
-        convol_files.extend(glob.glob(os.path.join(directory, "*CONVOL*")))
-        dopvol_files.extend(glob.glob(os.path.join(directory, "*DOPVOL*")))
+        convol_files = glob.glob(os.path.join(directory, "*CONVOL*"))
+        dopvol_files = glob.glob(os.path.join(directory, "*DOPVOL*"))
 
         file_list = convol_files + dopvol_files
 
         for file in file_list:
-            self.files.append(IrisFile(file))
+            try:
+                self.files.append(IrisFile(file))
+            except ValueError:
+                pass
 
         self._sort()
         self.sets = self._create_sets()

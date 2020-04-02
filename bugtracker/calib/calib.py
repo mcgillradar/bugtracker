@@ -233,7 +233,7 @@ class IrisController(Controller):
         self.calib_sets = calib_sets
 
         if len(calib_sets) < 1:
-            raise ValueError("Invalid number of calib sets")
+            raise ValueError("No IRIS data found for the specified time period.")
 
         self.init_angles(calib_sets[0])
 
