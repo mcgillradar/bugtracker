@@ -23,6 +23,20 @@ import datetime
 import cv2
 
 
+def date_range(datetime_1, datetime_2):
+
+    date_1 = datetime.date(datetime_1.year, datetime_1.month, datetime_1.day)
+    date_2 = datetime.date(datetime_2.year, datetime_2.month, datetime_2.day)
+
+    delta = date_2 - date_1
+    dates = []
+    for i in range(delta.days + 1):
+        day = date_1 + datetime.timedelta(days=i)
+        dates.append(day)
+
+    return dates
+
+
 class AnimationManager:
 
     def __init__(self, config, args):
@@ -37,14 +51,48 @@ class AnimationManager:
         if not os.path.isdir(self.anim_dir):
             raise FileNotFoundError(self.anim_dir)
 
-        self.plot_dir = self.get_full_plot_dir(args)
+        self.plot_dir = self.get_plot_dir(args)
 
-        all_plots = glob.glob(os.path.join(self.plot_dir, "*.png"))
-        
+        all_plots = self.get_all_plots()
+
         self.filtered_plots = self.filter_dates(all_plots)
 
 
-    def get_full_plot_dir(self, args):
+    def get_folder(self, dt):
+
+        year = dt.strftime("%Y")
+        month = dt.strftime("%m")
+        day = dt.strftime("%d")
+
+        return os.path.join(self.plot_dir, year, month, day)
+
+
+    def get_all_plots(self):
+
+        dates = date_range(self.start, self.stop)
+        folder_list = []
+
+        for date in dates:
+            folder_list.append(self.get_folder(date))
+
+        # check that all folders exist
+        for folder in folder_list:
+            if not os.path.isdir(folder):
+                msg = f"Missing folder: {folder}"
+                raise FileNotFoundError(msg)
+
+        all_files = []
+
+        for folder in folder_list:
+            files_in_folder = glob.glob(os.path.join(folder, "*.png"))
+            all_files.extend(files_in_folder)
+
+        all_files.sort()
+
+        return all_files
+
+
+    def get_plot_dir(self, args):
 
         base_plot_dir = self.config['plot_dir']
 
