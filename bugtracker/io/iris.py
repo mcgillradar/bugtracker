@@ -124,6 +124,8 @@ class IrisFile:
 
         if '~~' in path:
             self.set_file_tilde(path)
+        elif ':' in path:
+            self.set_file_colon(path)
         else:
             raise ValueError("Filename format not supported.")
 
@@ -143,6 +145,22 @@ class IrisFile:
 
         suffix_split = split_base[1].split(':')
         self.type=suffix_split[0]
+
+
+    def set_file_colon(self, path):
+
+        basename = os.path.basename(path)
+        split_base = basename.split(":")
+
+        if len(split_base) != 2:
+            print(split_base)
+            raise SyntaxError(f"Invalid filename {basename}")
+
+        datestamp = split_base[1]
+        pattern = "%Y%m%d%H%M%S"
+        self.datetime = datetime.datetime.strptime(datestamp, pattern)
+
+        self.type = split_base[0]
 
 
     def __str__(self):
@@ -261,6 +279,7 @@ class IrisSet:
         return f"{self.convol}\n{self.dopvol_1A}\n{self.dopvol_1B}\n{self.dopvol_1C}\n{self.dopvol_2}\n"
 
 
+
 class IrisCollection:
 
     def __init__(self, directory, radar_id):
@@ -268,20 +287,17 @@ class IrisCollection:
         self.radar_id = radar_id
         self.files = []
 
-        # including files with prefixes
-
-        convol_files = glob.glob(os.path.join(directory, "*CONVOL*"))
-        dopvol_files = glob.glob(os.path.join(directory, "*DOPVOL*"))
-
-        file_list = convol_files + dopvol_files
+        # including all files
+        file_list = glob.glob(os.path.join(directory, "*"))
 
         for file in file_list:
             try:
                 self.files.append(IrisFile(file))
-            except ValueError:
-                pass
+            except (ValueError, SyntaxError):
+                print(f"Invalid file, skipping: {file}")
 
         self._sort()
+
         self.sets = self._create_sets()
 
 
@@ -289,7 +305,8 @@ class IrisCollection:
         """
         Sort IRIS collection by ascending datetime
         """
-        self.files.sort(key = lambda x: x.datetime)
+        self.files.sort(key = lambda x: (x.datetime, x.type))
+
 
     def _create_sets(self):
 
@@ -372,11 +389,8 @@ class IrisCollection:
 
         sets_in_range = []
 
-        print(self.sets)
-
         for current_set in self.sets:
             current_set_dt = current_set.datetime
-            print(current_set_dt)
             if current_set_dt >= start_time and current_set_dt <= end_time:
                 sets_in_range.append(current_set)
 
