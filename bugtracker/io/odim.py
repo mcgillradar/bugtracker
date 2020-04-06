@@ -30,6 +30,25 @@ import bugtracker.core.utils
 from bugtracker.io.scan import ScanData
 
 
+def datetime_from_file(filepath):
+    """
+    Extracting the timestamp with the file (with validation)
+    """
+
+    basename = os.path.basename(filepath)
+    components = basename.split("_")
+    if len(components) < 2:
+        raise ValueError("Cannot split filename into components.")
+
+    datestamp = components[0] + components[1]
+
+    fmt = "%Y%m%d%H%M"
+
+    file_dt = datetime.datetime.strptime(datestamp, fmt)
+
+    return file_dt
+
+
 class OdimManager:
 
     """

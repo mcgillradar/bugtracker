@@ -1,4 +1,5 @@
 import os
+import shutil
 import glob
 import datetime
 import argparse
@@ -23,29 +24,58 @@ class GenericFile:
         self.dst_folder = dst
 
 
+    def make_folder(self):
+
+        if not os.path.isdir(self.dst_folder):
+            print("Making folder:", self.dst_folder)
+            os.makedirs(self.dst_folder)
+
+
+    def move_file(self):
+
+        base = os.path.basename(self.src_path)
+        new_path = os.path.join(self.dst_folder, base)
+        shutil.move(self.src_path, new_path)
+
+
 def extract_iris(filename):
 
     iris_file = bugtracker.io.iris.IrisFile(filename)
     scan_dt = iris_file.datetime
-    subdirs = scan_dt.strftime(key_format)
 
+    subdirs = scan_dt.strftime(key_format)
     source_dir = os.path.dirname(filename)
     dst_folder = os.path.join(source_dir, subdirs)
-    print("dst_folder", dst_folder)
+
+    return GenericFile(filename, dst_folder)
 
 
-def extract_nexrad(filename):
+def extract_nexrad(filename, radar_site):
 
-    raise NotImplementedError()
+    split_site = radar_site.split("/")
+    radar_id = split_site[6]
+
+    scan_dt = bugtracker.io.nexrad.datetime_from_file(filename, radar_id)
+
+    subdirs = scan_dt.strftime(key_format)
+    source_dir = os.path.dirname(filename)
+    dst_folder = os.path.join(source_dir, subdirs)
+
+    return GenericFile(filename, dst_folder)
 
 
 def extract_odim(filename):
 
-    raise NotImplementedError()
+    scan_dt = bugtracker.io.odim.datetime_from_file(filename)
+
+    subdirs = scan_dt.strftime(key_format)
+    source_dir = os.path.dirname(filename)
+    dst_folder = os.path.join(source_dir, subdirs)
+
+    return GenericFile(filename, dst_folder)
 
 
-
-def extract_generic(filename, radar_type):
+def extract_generic(filename, radar_type, radar_site):
     """
     Extract date from file
     """
@@ -55,7 +85,7 @@ def extract_generic(filename, radar_type):
     if radar_type == "iris":
         return extract_iris(filename)
     elif radar_type == "nexrad":
-        return extract_nexrad(filename)
+        return extract_nexrad(filename, radar_site)
     elif radar_type == "odim":
         return extract_odim(filename)
     else:
@@ -71,10 +101,6 @@ def folder_info(folder):
 
 
 
-def make_folders():
-    pass
-
-
 def sort_site(radar_site, radar_type):
 
     print("Radar site:", radar_site)
@@ -84,10 +110,14 @@ def sort_site(radar_site, radar_type):
 
     for file in all_files:
         if not os.path.isdir(file):
-            generic = extract_generic(file, radar_type)
+            generic = extract_generic(file, radar_type, radar_site)
             radar_files.append(generic)
 
     print("Num files:", len(radar_files))
+
+    for generic in radar_files:
+        generic.make_folder()
+        generic.move_file()
 
 
 def sort_radar(folder, radar_type):

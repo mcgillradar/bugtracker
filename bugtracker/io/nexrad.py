@@ -29,6 +29,21 @@ from scipy import interpolate
 import bugtracker.core.utils
 from bugtracker.io.scan import ScanData
 
+
+def datetime_from_file(filepath, radar_id):
+    """
+    Extracting the timestamp with the file (with validation)
+    """
+
+    basename = os.path.basename(filepath)
+    radar_upper = radar_id.upper()
+    date_fmt = f"{radar_upper}%Y%m%d_%H%M%S_V06"
+
+    file_dt = datetime.datetime.strptime(basename, date_fmt)
+
+    return file_dt
+
+
 class NexradManager:
     """
     The sole responsabilities of the NexradManager class are
