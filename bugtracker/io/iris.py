@@ -127,7 +127,7 @@ class IrisFile:
         elif ':' in path:
             self.set_file_colon(path)
         else:
-            raise ValueError("Filename format not supported.")
+            raise ValueError(f"Filename format not supported: {path}")
 
 
     def set_file_tilde(self, path):

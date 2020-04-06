@@ -6,7 +6,7 @@ long_description = """# bugtracker
 
 setup(
     name='bugtracker',
-    version='1.5.4',
+    version='1.5.5',
     description='Insect tracking from radar data.',
     long_description=long_description,
     long_description_content_type='text/markdown',
