@@ -30,6 +30,66 @@ import numpy as np
 import geopy
 import pyart
 
+import bugtracker.config
+
+def date_range(datetime_1, datetime_2):
+
+    date_1 = datetime.date(datetime_1.year, datetime_1.month, datetime_1.day)
+    date_2 = datetime.date(datetime_2.year, datetime_2.month, datetime_2.day)
+
+    delta = date_2 - date_1
+    dates = []
+    for i in range(delta.days + 1):
+        day = date_1 + datetime.timedelta(days=i)
+        dates.append(day)
+
+    return dates
+
+
+def get_input_folders(radar_type, radar_id, start, stop):
+
+    """
+    Here base would be something like /appdata/iris_data/xam
+    """
+
+    radar_id = radar_id.strip().lower()
+    config = bugtracker.config.load("./bugtracker.json")
+    base_folder = os.path.join(config['input_dirs'][radar_type], radar_id)
+    subdir_fmt = os.path.join("%Y", "%m", "%d")
+
+    folders = []
+
+    date_range = date_range(start, stop)
+    for scan_date in date_range:
+        subdir = scan_date.strftime(subdir_fmt)
+        date_folder = os.path.join(base_folder, subdir)
+        folders.append(date_folder)
+
+    return folders
+
+
+def get_input_files(radar_type, radar_id, start, stop):
+
+    """
+    Getting files from a recursive folder structure /yyyy/mm/dd
+    Note: This does not filter the files to make sure they have the
+    right file extension or name. That must be done in the NexradManager,
+    OdimManager and IrisCollection code.
+    """
+
+    radar_type = radar_type.strip().lower()
+    config = bugtracker.config.load("./bugtracker.json")
+
+    input_folders = get_input_folders(radar_type, radar_id, start, stop)
+
+    all_files = []
+
+    for folder in input_folders:
+        day_files = glob.glob(os.path.join(folder, "*"))
+        all_files.extend(day_files)
+
+    return all_files
+
 
 class DateRange:
 

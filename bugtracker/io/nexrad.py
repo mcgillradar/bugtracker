@@ -91,11 +91,17 @@ class NexradManager:
         and return an error if the closest is more than 30mins away
         or if no input files are found.
         """
+
+        subdir_fmt = os.path.join("%Y", "%m", "%d")
+        subdir = target_dt.strftime(subdir_fmt)
+
         print(f"Type target_dt: {type(target_dt)}")
         current_year = target_dt.strftime("%Y")
         radar_upper = self.radar_id.upper()
         glob_string = f"{radar_upper}{current_year}*_V06"
-        search = os.path.join(self.nexrad_dir, self.radar_id.lower(), glob_string)
+
+        day_dir = os.path.join(self.nexrad_dir, self.radar_id.lower(), subdir)
+        search = os.path.join(day_dir, glob_string)
         all_files = glob.glob(search)
         all_files.sort()
 

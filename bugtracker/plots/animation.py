@@ -22,19 +22,7 @@ import datetime
 
 import cv2
 
-
-def date_range(datetime_1, datetime_2):
-
-    date_1 = datetime.date(datetime_1.year, datetime_1.month, datetime_1.day)
-    date_2 = datetime.date(datetime_2.year, datetime_2.month, datetime_2.day)
-
-    delta = date_2 - date_1
-    dates = []
-    for i in range(delta.days + 1):
-        day = date_1 + datetime.timedelta(days=i)
-        dates.append(day)
-
-    return dates
+import bugtracker
 
 
 class AnimationManager:
@@ -69,7 +57,7 @@ class AnimationManager:
 
     def get_all_plots(self):
 
-        dates = date_range(self.start, self.stop)
+        dates = bugtracker.core.utils.date_range(self.start, self.stop)
         folder_list = []
 
         for date in dates:
