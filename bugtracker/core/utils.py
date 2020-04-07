@@ -23,6 +23,7 @@ into multiple modules.
 """
 
 import os
+import glob
 import sys
 import datetime
 
@@ -46,21 +47,21 @@ def date_range(datetime_1, datetime_2):
     return dates
 
 
-def get_input_folders(radar_type, radar_id, start, stop):
+def get_input_folders(config, radar_type, radar_id, start, stop):
 
     """
     Here base would be something like /appdata/iris_data/xam
     """
 
     radar_id = radar_id.strip().lower()
-    config = bugtracker.config.load("./bugtracker.json")
+
     base_folder = os.path.join(config['input_dirs'][radar_type], radar_id)
     subdir_fmt = os.path.join("%Y", "%m", "%d")
 
     folders = []
 
-    date_range = date_range(start, stop)
-    for scan_date in date_range:
+    date_list = date_range(start, stop)
+    for scan_date in date_list:
         subdir = scan_date.strftime(subdir_fmt)
         date_folder = os.path.join(base_folder, subdir)
         folders.append(date_folder)
@@ -68,7 +69,7 @@ def get_input_folders(radar_type, radar_id, start, stop):
     return folders
 
 
-def get_input_files(radar_type, radar_id, start, stop):
+def get_input_files(config, radar_type, radar_id, start, stop):
 
     """
     Getting files from a recursive folder structure /yyyy/mm/dd
@@ -78,15 +79,20 @@ def get_input_files(radar_type, radar_id, start, stop):
     """
 
     radar_type = radar_type.strip().lower()
-    config = bugtracker.config.load("./bugtracker.json")
 
-    input_folders = get_input_folders(radar_type, radar_id, start, stop)
+    input_folders = get_input_folders(config, radar_type, radar_id, start, stop)
 
     all_files = []
 
     for folder in input_folders:
         day_files = glob.glob(os.path.join(folder, "*"))
         all_files.extend(day_files)
+
+    all_files.sort()
+
+    if len(all_files) == 0:
+        msg = f"No files found! List of input folders checked: {input_folders}"
+        raise FileNotFoundError(msg)
 
     return all_files
 

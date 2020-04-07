@@ -127,7 +127,7 @@ class NexradManager:
         """
 
         # First, get all files
-        all_files = bugtracker.utils.get_input_files("nexrad", self.radar_id, start, end)
+        all_files = bugtracker.core.utils.get_input_files(self.config, "nexrad", self.radar_id, start, end)
         all_files.sort()
 
         # Next, filter the files according to NEXRAD specs

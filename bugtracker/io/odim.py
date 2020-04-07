@@ -99,7 +99,9 @@ class OdimManager:
         files_in_range = self.get_range(start, end)
 
         if len(files_in_range) == 0:
-            raise FileNotFoundError("No files found within +/- 1 hour range of target datetime")
+            timestamp = target_dt.strftime("%Y-%m-%d %H:%M:%S")
+            msg = f"No files found in 1 hour window around time: {timestamp}"
+            raise FileNotFoundError(msg)
 
         min_diff = 999999999
         min_idx = -1
@@ -127,10 +129,10 @@ class OdimManager:
         date range.
         """
 
-        radar_upper = self.radar_id.upper()
+        radar_lower = self.radar_id.lower()
 
         # First, grabbing all files
-        all_files = bugtracker.utils.get_input_files("odim", self.radar_id, start, end)
+        all_files = bugtracker.core.utils.get_input_files(self.config, "odim", self.radar_id, start, end)
 
         # Next, filtering files
         filtered_files = []
@@ -139,15 +141,9 @@ class OdimManager:
             if f"{radar_lower}.h5" in filename:
                 filtered_files.append(filename)
 
-
-        glob_string = f"*{radar_lower}.h5"
-        search = os.path.join(self.odim_dir, radar_lower, glob_string)
-        all_files = glob.glob(search)
-        all_files.sort()
-
         range_list = []
 
-        for input_file in all_files:
+        for input_file in filtered_files:
             current_dt = self.datetime_from_file(input_file)
             if start <= current_dt and current_dt <= end:
                 range_list.append(input_file)
