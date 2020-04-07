@@ -127,8 +127,19 @@ class OdimManager:
         date range.
         """
 
-        radar_lower = self.radar_id.lower()
         radar_upper = self.radar_id.upper()
+
+        # First, grabbing all files
+        all_files = bugtracker.utils.get_input_files("odim", self.radar_id, start, end)
+
+        # Next, filtering files
+        filtered_files = []
+
+        for filename in all_files:
+            if f"{radar_lower}.h5" in filename:
+                filtered_files.append(filename)
+
+
         glob_string = f"*{radar_lower}.h5"
         search = os.path.join(self.odim_dir, radar_lower, glob_string)
         all_files = glob.glob(search)

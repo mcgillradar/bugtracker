@@ -92,26 +92,19 @@ class NexradManager:
         or if no input files are found.
         """
 
-        subdir_fmt = os.path.join("%Y", "%m", "%d")
-        subdir = target_dt.strftime(subdir_fmt)
+        start = target_dt + datetime.timedelta(hours=-1)
+        end = target_dt + datetime.timedelta(hours=1)
 
-        print(f"Type target_dt: {type(target_dt)}")
-        current_year = target_dt.strftime("%Y")
-        radar_upper = self.radar_id.upper()
-        glob_string = f"{radar_upper}{current_year}*_V06"
+        files_in_range = self.get_range(start, end)
 
-        day_dir = os.path.join(self.nexrad_dir, self.radar_id.lower(), subdir)
-        search = os.path.join(day_dir, glob_string)
-        all_files = glob.glob(search)
-        all_files.sort()
+        if len(files_in_range) == 0:
+            raise FileNotFoundError("No files found within +/- 1 hour range of target datetime")
 
-        num_files = len(all_files)
-
-        min_idx = -1
         min_diff = 999999999
+        min_idx = -1
 
-        for x in range(0, num_files):
-            current_file = all_files[x]
+        for x in range(0, len(files_in_range)):
+            current_file = files_in_range[x]
             file_dt = self.datetime_from_file(current_file)
             diff = file_dt - target_dt
             total_seconds = abs(diff.total_seconds())
@@ -119,14 +112,7 @@ class NexradManager:
                 min_diff = total_seconds
                 min_idx = x
 
-        max_threshold = 60 * 30
-
-        if min_diff > max_threshold:
-            print(f"Min diff: {min_diff}")
-            raise ValueError("Files not found within 30 min threshold")
-
-        print("Min idx:", min_idx)
-        closest = all_files[min_idx]
+        closest = files_in_range[min_idx]
 
         if not os.path.isfile(closest):
             raise FileNotFoundError(closest)
@@ -140,16 +126,21 @@ class NexradManager:
         date range.
         """
 
-        radar_lower = self.radar_id.lower()
-        radar_upper = self.radar_id.upper()
-        glob_string = f"{radar_upper}*_V06"
-        search = os.path.join(self.nexrad_dir, radar_lower, glob_string)
-        all_files = glob.glob(search)
+        # First, get all files
+        all_files = bugtracker.utils.get_input_files("nexrad", self.radar_id, start, end)
         all_files.sort()
+
+        # Next, filter the files according to NEXRAD specs
+
+        filtered_files = []
+
+        for filename in all_files:
+            if "V06" in filename:
+                filtered_files.append(filename)
 
         range_list = []
 
-        for input_file in all_files:
+        for input_file in filtered_files:
             current_dt = self.datetime_from_file(input_file)
             if start <= current_dt and current_dt <= end:
                 range_list.append(input_file)
