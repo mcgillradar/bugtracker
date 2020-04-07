@@ -86,9 +86,7 @@ def iris_set_xam(config):
     """
 
     radar_id = "xam"
-    archive_dir = config['input_dirs']['iris']
-    radar_dir = os.path.join(archive_dir, radar_id)
-    iris_collection = bugtracker.io.iris.IrisCollection(radar_dir, radar_id)
+    iris_collection = bugtracker.io.iris.IrisCollection(radar_id)
 
     sample_datetime = datetime.datetime(2013, 7, 17, 19, 50, 0)
     sample_set = iris_collection.closest_set(sample_datetime)
@@ -105,9 +103,7 @@ def iris_set_wgj(config):
     """
 
     radar_id = "wgj"
-    archive_dir = config['input_dirs']['iris']
-    radar_dir = os.path.join(archive_dir, radar_id)
-    iris_collection = bugtracker.io.iris.IrisCollection(radar_dir, radar_id)
+    iris_collection = bugtracker.io.iris.IrisCollection(radar_id)
 
     sample_datetime = datetime.datetime(2014, 4, 16, 2, 30, 20)
     sample_set = iris_collection.closest_set(sample_datetime)

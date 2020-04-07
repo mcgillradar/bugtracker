@@ -282,13 +282,30 @@ class IrisSet:
 
 class IrisCollection:
 
-    def __init__(self, directory, radar_id):
+    def __init__(self, radar_id):
 
+        self.config = bugtracker.config.load("./bugtracker.json")
         self.radar_id = radar_id
         self.files = []
+        self.sets = []
+
+
+    def _sort(self):
+        """
+        Sort IRIS collection by ascending datetime
+        """
+        self.files.sort(key = lambda x: (x.datetime, x.type))
+
+
+    def _reset(self, start, stop):
+        """
+        The 'reset' function is called due to the YYYY/mm/dd folder structure.
+        """
 
         # including all files
-        file_list = glob.glob(os.path.join(directory, "*"))
+        file_list = bugtracker.core.utils.get_input_files(self.config, "iris", self.radar_id, start, stop)
+
+        self.files = []
 
         for file in file_list:
             try:
@@ -299,13 +316,6 @@ class IrisCollection:
         self._sort()
 
         self.sets = self._create_sets()
-
-
-    def _sort(self):
-        """
-        Sort IRIS collection by ascending datetime
-        """
-        self.files.sort(key = lambda x: (x.datetime, x.type))
 
 
     def _create_sets(self):
@@ -342,6 +352,11 @@ class IrisCollection:
         """
         This can be rewritten as a log(N) algorithm.
         """
+
+        start = target_dt + datetime.timedelta(hours=-1)
+        end = target_dt + datetime.timedelta(hours=1)
+
+        self._reset(start, end)
 
         num_sets = len(self.sets)
 
@@ -386,6 +401,8 @@ class IrisCollection:
         """
 
         end_time = start_time + datetime.timedelta(minutes=data_mins)
+
+        self._reset(start_time, end_time)
 
         sets_in_range = []
 

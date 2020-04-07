@@ -70,12 +70,8 @@ def get_closest_set(args, config):
     """
 
     station_code = args.station.lower()
-    archive_dir = config['input_dirs']['iris']
-    iris_current_dir = os.path.join(archive_dir, station_code)
-    if not os.path.isdir(iris_current_dir):
-        raise FileNotFoundError(iris_current_dir)
 
-    iris_coll = bugtracker.io.iris.IrisCollection(iris_current_dir, args.station)
+    iris_coll = bugtracker.io.iris.IrisCollection(args.station)
     iris_coll.check_sets()
 
     pattern = "%Y%m%d%H%M"
@@ -101,8 +97,7 @@ def iris_tracker(args, config):
     else:
         time_start = datetime.datetime.strptime(args.start, "%Y%m%d%H%M")
         data_mins = args.data_hours * 60
-        iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
-        iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
+        iris_collection = bugtracker.io.iris.IrisCollection(args.station)
         iris_set_list = iris_collection.time_range(time_start, data_mins)
 
     first_set = iris_set_list[0]

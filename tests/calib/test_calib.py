@@ -30,10 +30,7 @@ def test_iris_calib():
 
     args = CalibArgs(calib_timestamp, data_hours, station)
 
-    iris_dir = os.path.join(config['input_dirs']['iris'], "xam")
-    iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, "xam")
-    if len(iris_collection.sets) == 0:
-        raise ValueError("Invalid length")
+    iris_collection = bugtracker.io.iris.IrisCollection("xam")
 
     calib_grid = bugtracker.calib.calib.get_srtm(metadata, grid_info)
 

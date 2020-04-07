@@ -68,8 +68,7 @@ def plot_calib_graph(args, metadata, radial_plotter, plot_type, angle, data):
 
 def plot_calib_iris(args, config):
 
-    iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
-    iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
+    iris_collection = bugtracker.io.iris.IrisCollection(args.station)
     if len(iris_collection.sets) == 0:
         raise ValueError("Invalid length")
 
@@ -221,8 +220,7 @@ def plot_calib_graphs(args, config):
   
 def run_iris_calib(args, config):
 
-    iris_dir = os.path.join(config['input_dirs']['iris'], args.station)
-    iris_collection = bugtracker.io.iris.IrisCollection(iris_dir, args.station)
+    iris_collection = bugtracker.io.iris.IrisCollection(args.station)
     if len(iris_collection.sets) == 0:
         raise ValueError("Invalid length")
 
