@@ -220,11 +220,13 @@ def plot_calib_graphs(args, config):
   
 def run_iris_calib(args, config):
 
-    iris_collection = bugtracker.io.iris.IrisCollection(args.station)
-    if len(iris_collection.sets) == 0:
-        raise ValueError("Invalid length")
+    time_start = datetime.datetime.strptime(args.timestamp, "%Y%m%d%H%M")
+    data_mins = args.data_hours * 60
 
-    metadata = bugtracker.core.metadata.from_iris_set(iris_collection.sets[0])
+    iris_collection = bugtracker.io.iris.IrisCollection(args.station)
+    first_set = iris_collection.closest_set(time_start)
+
+    metadata = bugtracker.core.metadata.from_iris_set(first_set)
     grid_info = bugtracker.io.iris.iris_grid()
 
     calib_grid = bugtracker.calib.calib.get_srtm(metadata, grid_info)
@@ -232,8 +234,6 @@ def run_iris_calib(args, config):
     calib_controller = bugtracker.calib.calib.IrisController(args, metadata, grid_info)
     calib_controller.set_grids(calib_grid)
 
-    time_start = datetime.datetime.strptime(args.timestamp, "%Y%m%d%H%M")
-    data_mins = args.data_hours * 60
 
     print("Time start:", time_start.strftime("%Y%m%d%H%M"))
     print("Data mins:", data_mins)
