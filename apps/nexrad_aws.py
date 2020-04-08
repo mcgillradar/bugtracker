@@ -30,6 +30,8 @@ from bs4 import BeautifulSoup, SoupStrainer
 from  urllib.request import urlopen
 
 import bugtracker.config
+import bugtracker.io.nexrad
+import bugtracker.core.utils
 
 """
 NEXRAD uses an XML pipeline
@@ -53,14 +55,29 @@ def download_file(url, local_filename):
 
 class NexradDownloader:
 
-    def __init__(self, local_root, args):
+    def __init__(self, config, args):
         self.args = args
-        self.local_root = local_root
+        self.config = config
+        self.local_root = config['input_dirs']['nexrad']
         self.remote_root = "https://noaa-nexrad-level2.s3.amazonaws.com"
         self.radar = args.radar
         self.date_list = self.get_dates()
         self.file_list = []
         self.download_list = []
+
+
+    def make_folders(self):
+        
+        fmt = "%Y%m%d"
+        start = datetime.datetime.strptime(self.args.start, fmt)
+        end = datetime.datetime.strptime(self.args.end, fmt)
+
+        input_folders = bugtracker.core.utils.get_input_folders(self.config, "nexrad", self.radar, start, end)
+        for folder in input_folders:
+            if not os.path.isdir(folder):
+                print(f"Making folder: {folder}")
+                os.makedirs(folder)
+
 
     def get_dates(self):
         """
@@ -141,8 +158,15 @@ class NexradDownloader:
 
     def get_local_filename(self, basename):
 
-        code = self.radar
-        local_filename = os.path.join(self.local_root, code, basename)
+        radar_id = self.radar.strip().lower()
+        file_dt = bugtracker.io.nexrad.datetime_from_file(basename, radar_id)
+        base_folder = os.path.join(self.config['input_dirs']['nexrad'], radar_id)
+        subdir_fmt = os.path.join("%Y", "%m", "%d")
+        subdir = file_dt.strftime(subdir_fmt)
+        date_folder = os.path.join(base_folder, subdir)
+
+        local_filename = os.path.join(date_folder, basename)
+        print("local filename:", local_filename)
         return local_filename
 
 
@@ -178,7 +202,7 @@ class NexradDownloader:
 
         for url in self.file_list:
             base_filename = os.path.basename(url)
-            local_filename = os.path.join(download_dir, base_filename)
+            local_filename = self.get_local_filename(base_filename)
             arg_list.append((url, local_filename))
 
         num_cores = mp.cpu_count()
@@ -232,9 +256,10 @@ def nexrad():
         print(f"Making directory: {radar_folder}")
         os.mkdir(radar_folder)
 
-    downloader = NexradDownloader(download_dir, args)
+    downloader = NexradDownloader(config, args)
     print(downloader)
 
+    downloader.make_folders()
     downloader.get_file_list()
     downloader.exclude_local()
     downloader.download()
