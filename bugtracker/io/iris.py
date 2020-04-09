@@ -422,6 +422,10 @@ class IrisData(ScanData):
         Extract numpy arrays for easy file manipulation
         """
 
+        if not iris_set.is_valid():
+            str_rep = str(iris_set)
+            raise FileNotFoundError(str_rep)
+
         metadata = bugtracker.core.metadata.from_iris_set(iris_set)
         grid_info = iris_grid()
         datetime = iris_set.datetime

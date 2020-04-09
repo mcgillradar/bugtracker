@@ -353,7 +353,10 @@ class IrisProcessor(Processor):
             raise ValueError("There are 0 IrisSet entries - cannot process.")
 
         for iris_set in iris_sets:
-            self.process_set(iris_set)
+            try:
+                self.process_set(iris_set)
+            except (OSError, IndexError, FileNotFoundError):
+                print("Could not read file, skipping.")
 
 
 class NexradProcessor(Processor):

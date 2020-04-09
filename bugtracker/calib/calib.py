@@ -249,7 +249,7 @@ class IrisController(Controller):
         try:
             iris_data = bugtracker.io.iris.IrisData(iris_set)
             iris_data.fill_grids()
-        except (OSError, IndexError):
+        except (OSError, IndexError, FileNotFoundError):
             print("Could not read file, skipping.")
             self.num_excluded += 1
             return
