@@ -78,7 +78,7 @@ In the event of an error that doesn't have a clear solution, please paste the st
 
 ## Developer Guide
 
-We welcome pull requests and contributions to this project. In this section, I will explain the general philosphy behind the development, so the codebase is more clear, and to give a better idea of how to extend the code.
+We welcome pull requests and contributions to this project. In this section, I will explain the general philosophy behind the development, so the codebase is more clear, and to give a better idea of how to extend the code.
 
 This program makes heavy use of object-oriented programming in Python. Since the application needed to support IRIS, NEXRAD and ODIM_H5 files, I make use of inheritance to allow for resusable code.
 
@@ -106,3 +106,5 @@ These classes are ubiquitous throughout the application, so if you are going to 
 2. bugtracker/core/grid.py
 
 A common design pattern throughout this application is, instead of passing around dozens of parameters, we put all the information in a Metadata object and a GridInfo object, and pass it around instead.
+
+A general tip for programming with Bugtracker - once you have a Metadata object and a GridInfo object representing your radar, you can call most of the functions in the program.
